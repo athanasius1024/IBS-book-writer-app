@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tier.tier_name }} - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>{{ tier.tier_name }}</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('tiers_list') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Tier Details -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Details</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Tier Name:</strong> {{ tier.tier_name }}</p>
+                <p><strong>Sort Order:</strong> {{ tier.sort_order }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Created:</strong> {{ tier.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p><strong>Modified:</strong> {{ tier.modified_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Explanations with HTMX inline editing -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-lightbulb"></i> Explanations ({{ tier.tier_explains|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        <div id="tier-explains-list">
+            {% if tier.tier_explains %}
+                {% for explain in tier.tier_explains|sort(attribute='sort_order') %}
+                    {% include 'explanations/_tier_explain_item.html' %}
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No explanations defined for this tier yet.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Add New Explanation Form -->
+        <div class="card mt-3 bg-light">
+            <div class="card-body">
+                <h6><i class="bi bi-plus-circle"></i> Add New Explanation</h6>
+                <form hx-post="{{ url_for('tier_explain_new') }}" 
+                      hx-target="#tier-explains-list" 
+                      hx-swap="beforeend"
+                      hx-on="htmx:afterRequest: this.reset()">
+                    <input type="hidden" name="tier_id" value="{{ tier.tier_id }}">
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <input type="text" class="form-control" name="explain_header" 
+                                   placeholder="Explanation Header">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <textarea class="form-control" name="explain_desc" rows="2"
+                                      placeholder="Explanation Description"></textarea>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="submit" class="btn btn-info w-100">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Institutions in this Tier -->
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-building"></i> Institutions ({{ tier.institutions|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if tier.institutions %}
+            <div class="list-group">
+                {% for institution in tier.institutions|sort(attribute='sort_order') %}
+                    <a href="{{ url_for('institution_detail', id=institution.institution_id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ institution.institution_name }}</h5>
+                            <small class="text-muted">{{ institution.roles|length }} roles</small>
+                        </div>
+                        {% if institution.branch %}
+                            <p class="mb-1 text-muted small">Branch: {{ institution.branch.branch_name }}</p>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No institutions defined for this tier yet.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

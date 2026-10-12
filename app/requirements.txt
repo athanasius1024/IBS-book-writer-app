@@ -1,0 +1,7 @@
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.0.36
+psycopg2-binary==2.9.10
+Flask-WTF==1.2.1
+Markdown==3.5.1
+python-dotenv==1.0.0

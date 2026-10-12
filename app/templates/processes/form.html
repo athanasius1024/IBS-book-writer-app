@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}{% if process %}Edit{% else %}New{% endif %} Process - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>
+            <i class="bi bi-diagram-3"></i> 
+            {% if process %}Edit{% else %}New{% endif %} Process
+        </h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% if process %}{{ url_for('process_detail', id=process.process_id) }}{% else %}{{ url_for('processes_list') }}{% endif %}" class="btn btn-secondary">
+            <i class="bi bi-x-circle"></i> Cancel
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="process_name" class="form-label">Process Name *</label>
+                <input type="text" class="form-control" id="process_name" name="process_name" 
+                       value="{% if process %}{{ process.process_name }}{% endif %}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="process_header" class="form-label">Header</label>
+                <input type="text" class="form-control" id="process_header" name="process_header" 
+                       value="{% if process %}{{ process.process_header }}{% endif %}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="process_desc" class="form-label">Description</label>
+                <textarea class="form-control" id="process_desc" name="process_desc" rows="8">{% if process %}{{ process.process_desc }}{% endif %}</textarea>
+                <div class="form-text">You can use Markdown formatting here.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="sort_order" class="form-label" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="top" 
+                       title="Controls the display order of processes. Lower numbers appear first.">
+                    Sort Order
+                </label>
+                <input type="number" class="form-control" id="sort_order" name="sort_order" 
+                       value="{% if process %}{{ process.sort_order }}{% else %}0{% endif %}">
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% if process %}{{ url_for('process_detail', id=process.process_id) }}{% else %}{{ url_for('processes_list') }}{% endif %}" 
+                   class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-check-circle"></i> 
+                    {% if process %}Update{% else %}Create{% endif %} Process
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

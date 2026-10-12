@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}{{ process.process_name }} - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>{{ process.process_name }}</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('processes_list') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <a href="{{ url_for('process_edit', id=process.process_id) }}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+    </div>
+</div>
+
+<!-- Process Details -->
+<div class="card">
+    <div class="card-header bg-warning">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Details</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Process Name:</strong> {{ process.process_name }}</p>
+                <p>
+                    <strong data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="Controls the display order of processes. Lower numbers appear first.">
+                        Sort Order:
+                    </strong> 
+                    {{ process.sort_order }}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Created:</strong> {{ process.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p><strong>Modified:</strong> {{ process.modified_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+        </div>
+        {% if process.process_header %}
+            <hr>
+            <h6>Header</h6>
+            <p>{{ process.process_header }}</p>
+        {% endif %}
+        {% if process.process_desc %}
+            <hr>
+            <h6>Description</h6>
+            <div>{{ process.process_desc }}</div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

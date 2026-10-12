@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}{% if role %}Edit{% else %}New{% endif %} Role - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>
+            <i class="bi bi-person-badge"></i> 
+            {% if role %}Edit{% else %}New{% endif %} Role
+        </h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% if role %}{{ url_for('role_detail', id=role.role_id) }}{% else %}{{ url_for('roles_list') }}{% endif %}" class="btn btn-secondary">
+            <i class="bi bi-x-circle"></i> Cancel
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="role_name" class="form-label">Role Name *</label>
+                <input type="text" class="form-control" id="role_name" name="role_name" 
+                       value="{% if role %}{{ role.role_name }}{% endif %}" required>
+            </div>
+            
+            <div class="mb-3">
+                <label for="institution_id" class="form-label">Institution *</label>
+                <select class="form-select" id="institution_id" name="institution_id" required>
+                    <option value="">Select an institution...</option>
+                    {% for institution in institutions %}
+                        <option value="{{ institution.institution_id }}" 
+                                {% if role and role.institution_id == institution.institution_id %}selected{% endif %}
+                                {% if request.args.get('institution') == institution.institution_id|string %}selected{% endif %}>
+                            {{ institution.institution_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="role_desc" class="form-label">Description</label>
+                <textarea class="form-control" id="role_desc" name="role_desc" rows="5">{% if role %}{{ role.role_desc }}{% endif %}</textarea>
+                <div class="form-text">You can use Markdown formatting here.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="sort_order" class="form-label" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="top" 
+                       title="Controls the display order of roles. Lower numbers appear first.">
+                    Sort Order
+                </label>
+                <input type="number" class="form-control" id="sort_order" name="sort_order" 
+                       value="{% if role %}{{ role.sort_order }}{% else %}0{% endif %}">
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% if role %}{{ url_for('role_detail', id=role.role_id) }}{% else %}{{ url_for('roles_list') }}{% endif %}" 
+                   class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-check-circle"></i> 
+                    {% if role %}Update{% else %}Create{% endif %} Role
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

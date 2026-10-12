@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{% if institution %}Edit{% else %}New{% endif %} Institution - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>
+            <i class="bi bi-building"></i> 
+            {% if institution %}Edit{% else %}New{% endif %} Institution
+        </h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% if institution %}{{ url_for('institution_detail', id=institution.institution_id) }}{% else %}{{ url_for('institutions_list') }}{% endif %}" class="btn btn-secondary">
+            <i class="bi bi-x-circle"></i> Cancel
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label for="institution_name" class="form-label">Institution Name *</label>
+                <input type="text" class="form-control" id="institution_name" name="institution_name" 
+                       value="{% if institution %}{{ institution.institution_name }}{% endif %}" required>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="tier_id" class="form-label">Tier *</label>
+                    <select class="form-select" id="tier_id" name="tier_id" required>
+                        <option value="">Select a tier...</option>
+                        {% for tier in tiers %}
+                            <option value="{{ tier.tier_id }}" 
+                                    {% if institution and institution.tier_id == tier.tier_id %}selected{% endif %}>
+                                {{ tier.tier_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="branch_id" class="form-label">Branch</label>
+                    <select class="form-select" id="branch_id" name="branch_id">
+                        <option value="">None</option>
+                        {% for branch in branches %}
+                            <option value="{{ branch.branch_id }}" 
+                                    {% if institution and institution.branch_id == branch.branch_id %}selected{% endif %}>
+                                {{ branch.branch_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="institution_header" class="form-label">Header</label>
+                <input type="text" class="form-control" id="institution_header" name="institution_header" 
+                       value="{% if institution %}{{ institution.institution_header }}{% endif %}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="institution_desc" class="form-label">Description</label>
+                <textarea class="form-control" id="institution_desc" name="institution_desc" rows="5">{% if institution %}{{ institution.institution_desc }}{% endif %}</textarea>
+                <div class="form-text">You can use Markdown formatting here.</div>
+            </div>
+            
+            <div class="mb-3">
+                <label for="sort_order" class="form-label" 
+                       data-bs-toggle="tooltip" 
+                       data-bs-placement="top" 
+                       title="Controls the display order of institutions. Lower numbers appear first.">
+                    Sort Order
+                </label>
+                <input type="number" class="form-control" id="sort_order" name="sort_order" 
+                       value="{% if institution %}{{ institution.sort_order }}{% else %}0{% endif %}">
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a href="{% if institution %}{{ url_for('institution_detail', id=institution.institution_id) }}{% else %}{{ url_for('institutions_list') }}{% endif %}" 
+                   class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i> 
+                    {% if institution %}Update{% else %}Create{% endif %} Institution
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,377 @@
+/* HTML Book CSS - optimized for web viewing */
+
+body {
+    font-family: Georgia, serif;
+    font-size: 12pt;
+    line-height: 1.6;
+    max-width: 50em;
+    margin: 0 auto;
+    padding: 4em 0.25in 2em 0.25in;  /* Top padding for fixed header */
+    color: #333;
+    background-color: #fff;
+}
+
+/* Sticky header with TOC link */
+.book-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #2c3e50;
+    color: white;
+    padding: 0.5em 1em;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.book-header-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0;
+}
+
+.book-header-nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 1em;
+    padding: 0.3em 0.8em;
+    background-color: #34495e;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.book-header-nav a:hover {
+    background-color: #3498db;
+}
+
+/* Floating sidebar navigation */
+.sidebar-nav {
+    position: fixed;
+    left: 1em;
+    top: 5em;
+    width: 200px;
+    max-height: calc(100vh - 6em);
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    padding: 1em;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-size: 0.85em;
+    display: none;  /* Hidden on small screens */
+}
+
+.sidebar-nav h4 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-size: 1em;
+    color: #2c3e50;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+}
+
+.sidebar-nav li {
+    margin-bottom: 0.3em;
+}
+
+.sidebar-nav a {
+    color: #2980b9;
+    text-decoration: none;
+    display: block;
+    padding: 0.2em 0;
+}
+
+.sidebar-nav a:hover {
+    color: #3498db;
+    text-decoration: underline;
+}
+
+.sidebar-nav a.active {
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+/* Show sidebar on larger screens */
+@media (min-width: 1200px) {
+    .sidebar-nav {
+        display: block;
+    }
+    
+    body {
+        margin-left: 250px;
+    }
+}
+
+/* Hide Pandoc title block */
+#title-block-header {
+    display: none;
+}
+
+/* Cover page - centered */
+.cover-page {
+    text-align: center;
+    padding: 4em 0;
+}
+
+.cover-page h1 {
+    margin-top: 0;
+    margin-bottom: 0.5em;
+    font-size: 2.5em;
+}
+
+.cover-page p,
+.cover-page strong {
+    text-align: center;
+    margin-bottom: 0.3em;
+    font-size: 1.3em;
+    font-weight: bold;
+}
+
+.cover-page .cover-author,
+.cover-page .cover-date {
+    display: block;
+    text-align: center;
+    font-size: 1em;
+    font-weight: normal;
+    margin-top: 2em;
+    margin-bottom: 0.3em;
+}
+
+/* Author page - centered */
+.author-page {
+    text-align: center;
+    padding: 4em 0;
+}
+
+.author-page p {
+    text-align: center;
+    margin-bottom: 0.3em;
+}
+
+/* Dedication page - centered */
+.dedication-page {
+    text-align: center;
+    padding: 4em 0;
+}
+
+.dedication-page h2,
+.dedication-page p {
+    text-align: center;
+}
+
+/* Headings */
+h1 {
+    font-size: 2em;
+    font-weight: bold;
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    color: #2c3e50;
+}
+
+h2 {
+    font-size: 1.5em;
+    font-weight: bold;
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+    color: #34495e;
+}
+
+h3 {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-top: 1em;
+    margin-bottom: 0.3em;
+    color: #555;
+}
+
+h4 {
+    font-size: 1em;
+    font-weight: bold;
+    margin-top: 0.8em;
+    margin-bottom: 0.3em;
+    color: #666;
+}
+
+p {
+    margin-bottom: 1em;
+}
+
+/* Table of Contents page wrapper */
+.toc-page {
+    margin: 3em 0;
+    padding: 2em;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+
+/* TOC title (book title) */
+.toc-title {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 0.3em;
+    font-size: 2.5em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* TOC subtitle (book subtitle/tagline) */
+.toc-subtitle {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 1.5em;
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #34495e;
+}
+
+/* TOC heading ("Table of Contents" text) */
+.toc-heading {
+    text-align: center;
+    margin-top: 0;
+    margin-bottom: 1em;
+    font-size: 1.8em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+/* Table of Contents - clean hyperlinks */
+#TOC {
+    margin: 0;
+    padding: 0;
+}
+
+#TOC h1 {
+    display: none;  /* Hide Pandoc's auto-generated TOC title */
+}
+
+#TOC ul {
+    list-style: none;
+    padding-left: 0;
+    margin-left: 0;
+}
+
+#TOC li {
+    margin-bottom: 0.5em;
+    line-height: 1.5;
+}
+
+#TOC a {
+    text-decoration: none;
+    color: #2980b9;
+    display: inline;  /* Changed from block to inline to prevent dots */
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+#TOC a:hover {
+    color: #3498db;
+    text-decoration: underline;
+}
+
+#TOC a:visited {
+    color: #8e44ad;
+}
+
+/* Nested TOC indentation */
+#TOC ul ul {
+    padding-left: 1.5em;
+    margin-top: 0.3em;
+}
+
+#TOC ul ul ul {
+    padding-left: 1.5em;
+}
+
+/* Lists */
+ul, ol {
+    margin-left: 1.5em;
+    margin-bottom: 1em;
+    padding-left: 0;
+}
+
+li {
+    margin-bottom: 0.3em;
+}
+
+/* Blockquotes */
+blockquote {
+    margin-left: 1.5em;
+    margin-right: 1.5em;
+    font-style: italic;
+    border-left: 3px solid #ccc;
+    padding-left: 1em;
+    color: #555;
+}
+
+/* Links - glossary terms */
+a.glossary-term {
+    color: #27ae60;
+    text-decoration: none;
+    border-bottom: 1px dotted #27ae60;
+    cursor: help;
+}
+
+a.glossary-term:hover {
+    color: #229954;
+    border-bottom: 1px solid #229954;
+}
+
+/* Regular links */
+a {
+    color: #2980b9;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Code blocks */
+pre, code {
+    font-family: "Courier New", monospace;
+    font-size: 0.9em;
+    background-color: #f5f5f5;
+    padding: 0.2em 0.4em;
+    border-radius: 3px;
+}
+
+pre {
+    padding: 1em;
+    overflow-x: auto;
+}
+
+/* Blank pages - hide in HTML */
+.blank-page {
+    display: none;
+}
+
+/* Glossary section */
+#glossary {
+    margin-top: 3em;
+    padding-top: 2em;
+    border-top: 2px solid #ddd;
+}
+
+/* Print styles */
+@media print {
+    body {
+        max-width: none;
+        margin: 0;
+        padding: 1cm;
+    }
+    
+    #TOC {
+        background-color: transparent;
+        page-break-after: always;
+    }
+    
+    h1, h2, h3 {
+        page-break-after: avoid;
+    }
+}

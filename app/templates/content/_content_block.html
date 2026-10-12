@@ -1,0 +1,49 @@
+<div class="card mb-3" id="content-block-{{ block.block_id }}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span class="badge bg-secondary">{{ block.block_type }}</span>
+        <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary btn-edit-content" 
+                    data-block-id="{{ block.block_id }}"
+                    title="Edit">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-outline-danger"
+                    hx-delete="{{ url_for('content_block_delete', id=block.block_id) }}"
+                    hx-target="#content-block-{{ block.block_id }}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Delete this content block?"
+                    title="Delete">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if block.block_type == 'text' %}
+            <div class="content-text">{{ block.content_text | safe }}</div>
+        {% elif block.block_type == 'heading' %}
+            <h4>{{ block.content_text }}</h4>
+        {% elif block.block_type == 'image' and block.asset %}
+            <img src="{{ url_for('static', filename=block.asset.file_path) }}" 
+                 alt="{{ block.asset.alt_text or block.asset.asset_name }}"
+                 class="img-fluid">
+            {% if block.asset.caption %}
+                <p class="text-muted small mt-2">{{ block.asset.caption }}</p>
+            {% endif %}
+        {% elif block.block_type == 'icon' and block.asset %}
+            <img src="{{ url_for('static', filename=block.asset.file_path) }}" 
+                 alt="{{ block.asset.alt_text or block.asset.asset_name }}"
+                 style="max-width: 64px; max-height: 64px;">
+        {% elif block.block_type == 'table' and block.content_data %}
+            <div class="table-responsive">
+                <!-- Table rendering from JSON data -->
+                <p class="text-muted">Table: {{ block.content_data | tojson }}</p>
+            </div>
+        {% elif block.block_type == 'list' %}
+            <div class="content-list">{{ block.content_text | safe }}</div>
+        {% endif %}
+        
+        {% if entity_link and entity_link.section_name %}
+            <small class="text-muted">Section: {{ entity_link.section_name }}</small>
+        {% endif %}
+    </div>
+</div>

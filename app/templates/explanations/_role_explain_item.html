@@ -1,0 +1,60 @@
+<div class="card mb-2" id="role-explain-{{ explain.explain_id }}">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1" id="role-explain-view-{{ explain.explain_id }}">
+                {% if explain.explain_header %}
+                    <h6 class="card-subtitle mb-2 text-info">{{ explain.explain_header }}</h6>
+                {% endif %}
+                {% if explain.explain_desc %}
+                    <p class="card-text">{{ explain.explain_desc }}</p>
+                {% endif %}
+                <small class="text-muted">Sort: {{ explain.sort_order }}</small>
+            </div>
+            <div id="role-explain-edit-{{ explain.explain_id }}" style="display:none;" class="flex-grow-1">
+                <form hx-put="{{ url_for('role_explain_edit', id=explain.explain_id) }}"
+                      hx-target="#role-explain-{{ explain.explain_id }}"
+                      hx-swap="outerHTML">
+                    <div class="mb-2">
+                        <input type="text" class="form-control form-control-sm" name="explain_header" 
+                               value="{{ explain.explain_header or '' }}" placeholder="Header">
+                    </div>
+                    <div class="mb-2">
+                        <textarea class="form-control form-control-sm" name="explain_desc" rows="3" 
+                                  placeholder="Description">{{ explain.explain_desc or '' }}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label form-label-sm mb-1" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="Controls the display order of explanations. Lower numbers appear first.">
+                            Sort Order
+                        </label>
+                        <input type="number" class="form-control form-control-sm" name="sort_order" 
+                               value="{{ explain.sort_order }}" style="width: 100px;">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-success">
+                        <i class="bi bi-check"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" 
+                            onclick="toggleRoleExplainEdit({{ explain.explain_id }})">
+                        <i class="bi bi-x"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" 
+                            hx-delete="{{ url_for('role_explain_delete', id=explain.explain_id) }}"
+                            hx-target="#role-explain-{{ explain.explain_id }}"
+                            hx-swap="outerHTML"
+                            hx-on="htmx:afterRequest: saveDeletedExplanation(event, 'role', {{ explain.explain_id }}, '{{ explain.explain_header|replace("'", "\\'") }}', '{{ explain.explain_desc|replace("'", "\\'") }}', {{ explain.sort_order }}, {{ explain.role_id }})">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+            <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-outline-warning" 
+                        onclick="toggleRoleExplainEdit({{ explain.explain_id }})"
+                        title="Edit">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

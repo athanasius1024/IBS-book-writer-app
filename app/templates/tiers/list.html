@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Tiers - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-layers"></i> Tiers</h1>
+    </div>
+</div>
+
+<!-- Tiers List -->
+{% if tiers %}
+    <div class="row">
+        {% for tier in tiers %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">{{ tier.tier_name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Institutions:</strong> {{ tier.institutions|length }}</p>
+                        <p><strong>Sort Order:</strong> {{ tier.sort_order }}</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ url_for('tier_detail', id=tier.tier_id) }}" class="btn btn-sm btn-info">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No tiers found.
+    </div>
+{% endif %}
+{% endblock %}

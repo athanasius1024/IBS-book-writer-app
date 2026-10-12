@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}{{ institution.institution_name }} - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>{{ institution.institution_name }}</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('institutions_list') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <a href="{{ url_for('institution_edit', id=institution.institution_id) }}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+    </div>
+</div>
+
+<!-- Institution Details -->
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Details</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Tier:</strong> {{ institution.tier.tier_name }}</p>
+                {% if institution.branch %}
+                    <p><strong>Branch:</strong> {{ institution.branch.branch_name }}</p>
+                {% endif %}
+                <p>
+                    <strong data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="Controls the display order of institutions. Lower numbers appear first.">
+                        Sort Order:
+                    </strong> 
+                    {{ institution.sort_order }}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Created:</strong> {{ institution.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p><strong>Modified:</strong> {{ institution.modified_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+        </div>
+        {% if institution.institution_header %}
+            <hr>
+            <h6>Header</h6>
+            <p>{{ institution.institution_header }}</p>
+        {% endif %}
+        {% if institution.institution_desc %}
+            <hr>
+            <h6>Description</h6>
+            <p>{{ institution.institution_desc }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Explanations with HTMX inline editing -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-lightbulb"></i> Explanations ({{ institution.institution_explains|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        <div id="institution-explains-list">
+            {% if institution.institution_explains %}
+                {% for explain in institution.institution_explains|sort(attribute='sort_order') %}
+                    {% include 'explanations/_institution_explain_item.html' %}
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No explanations defined for this institution yet.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Add New Explanation Form -->
+        <div class="card mt-3 bg-light">
+            <div class="card-body">
+                <h6><i class="bi bi-plus-circle"></i> Add New Explanation</h6>
+                <form hx-post="{{ url_for('institution_explain_new') }}" 
+                      hx-target="#institution-explains-list" 
+                      hx-swap="beforeend"
+                      hx-on="htmx:afterRequest: this.reset()">
+                    <input type="hidden" name="institution_id" value="{{ institution.institution_id }}">
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <input type="text" class="form-control" name="explain_header" 
+                                   placeholder="Explanation Header">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <textarea class="form-control" name="explain_desc" rows="2"
+                                      placeholder="Explanation Description"></textarea>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="submit" class="btn btn-info w-100">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Roles -->
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-person-badge"></i> Roles ({{ institution.roles|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if institution.roles %}
+            <div class="list-group">
+                {% for role in institution.roles|sort(attribute='sort_order') %}
+                    <a href="{{ url_for('role_detail', id=role.role_id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h5 class="mb-1">{{ role.role_name }}</h5>
+                            <small class="text-muted">{{ role.duties|length }} duties</small>
+                        </div>
+                        {% if role.role_desc %}
+                            <p class="mb-1 text-muted small">{{ role.role_desc[:150] }}{% if role.role_desc|length > 150 %}...{% endif %}</p>
+                        {% endif %}
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No roles defined for this institution yet.</p>
+        {% endif %}
+        <div class="mt-3">
+            <a href="{{ url_for('role_new') }}?institution={{ institution.institution_id }}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Add Role
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,186 @@
+{% extends "base.html" %}
+
+{% block title %}{{ role.role_name }} - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>{{ role.role_name }}</h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('tier_detail', id=role.institution.tier.tier_id) }}">
+                        {{ role.institution.tier.tier_name }}
+                    </a>
+                </li>
+                {% if role.institution.branch %}
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('branch_detail', id=role.institution.branch.branch_id) }}">
+                        {{ role.institution.branch.branch_name }}
+                    </a>
+                </li>
+                {% endif %}
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('institution_detail', id=role.institution.institution_id) }}">
+                        {{ role.institution.institution_name }}
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">{{ role.role_name }}</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{{ url_for('roles_list') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <a href="{{ url_for('role_edit', id=role.role_id) }}" class="btn btn-warning">
+            <i class="bi bi-pencil"></i> Edit
+        </a>
+    </div>
+</div>
+
+<!-- Role Details -->
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Details</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Tier:</strong> 
+                    <a href="{{ url_for('tier_detail', id=role.institution.tier.tier_id) }}">
+                        {{ role.institution.tier.tier_name }}
+                    </a>
+                </p>
+                {% if role.institution.branch %}
+                <p><strong>Branch:</strong> 
+                    <a href="{{ url_for('branch_detail', id=role.institution.branch.branch_id) }}">
+                        {{ role.institution.branch.branch_name }}
+                    </a>
+                </p>
+                {% endif %}
+                <p><strong>Institution:</strong> 
+                    <a href="{{ url_for('institution_detail', id=role.institution.institution_id) }}">
+                        {{ role.institution.institution_name }}
+                    </a>
+                </p>
+                <p>
+                    <strong data-bs-toggle="tooltip" 
+                            data-bs-placement="top" 
+                            title="Controls the display order of roles. Lower numbers appear first.">
+                        Sort Order:
+                    </strong> 
+                    {{ role.sort_order }}
+                </p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Created:</strong> {{ role.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                <p><strong>Modified:</strong> {{ role.modified_at.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+        </div>
+        {% if role.role_desc %}
+            <hr>
+            <h6>Description</h6>
+            <p>{{ role.role_desc }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Duties with HTMX inline editing -->
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-list-check"></i> Duties ({{ role.duties|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        <div id="duties-list">
+            {% if role.duties %}
+                {% for duty in role.duties|sort(attribute='sort_order') %}
+                    {% include 'duties/_duty_item.html' %}
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No duties defined for this role yet.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Add New Duty Form -->
+        <div class="card mt-3 bg-light">
+            <div class="card-body">
+                <h6><i class="bi bi-plus-circle"></i> Add New Duty</h6>
+                <form hx-post="{{ url_for('duty_new') }}" 
+                      hx-target="#duties-list" 
+                      hx-swap="beforeend"
+                      hx-on="htmx:afterRequest: this.reset()">
+                    <input type="hidden" name="role_id" value="{{ role.role_id }}">
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <input type="text" class="form-control" name="duty_header" 
+                                   placeholder="Duty Header" required>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <input type="text" class="form-control" name="duty_desc" 
+                                   placeholder="Duty Description">
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Explanations with HTMX inline editing -->
+<div class="card mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+            <i class="bi bi-lightbulb"></i> Explanations ({{ role.role_explains|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        <div id="role-explains-list">
+            {% if role.role_explains %}
+                {% for explain in role.role_explains|sort(attribute='sort_order') %}
+                    {% include 'explanations/_role_explain_item.html' %}
+                {% endfor %}
+            {% else %}
+                <p class="text-muted">No explanations defined for this role yet.</p>
+            {% endif %}
+        </div>
+        
+        <!-- Add New Explanation Form -->
+        <div class="card mt-3 bg-light">
+            <div class="card-body">
+                <h6><i class="bi bi-plus-circle"></i> Add New Explanation</h6>
+                <form hx-post="{{ url_for('role_explain_new') }}" 
+                      hx-target="#role-explains-list" 
+                      hx-swap="beforeend"
+                      hx-on="htmx:afterRequest: this.reset()">
+                    <input type="hidden" name="role_id" value="{{ role.role_id }}">
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-2">
+                            <input type="text" class="form-control" name="explain_header" 
+                                   placeholder="Explanation Header">
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <textarea class="form-control" name="explain_desc" rows="2"
+                                      placeholder="Explanation Description"></textarea>
+                        </div>
+                        <div class="col-md-2 mb-2">
+                            <button type="submit" class="btn btn-info w-100">
+                                <i class="bi bi-plus"></i> Add
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

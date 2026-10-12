@@ -1,0 +1,58 @@
+<div class="card mb-2" id="duty-{{ duty.duty_id }}">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start">
+            <div class="flex-grow-1" id="duty-view-{{ duty.duty_id }}">
+                <h6 class="card-subtitle mb-2 text-primary">{{ duty.duty_header }}</h6>
+                {% if duty.duty_desc %}
+                    <p class="card-text">{{ duty.duty_desc }}</p>
+                {% endif %}
+                <small class="text-muted">Sort: {{ duty.sort_order }}</small>
+            </div>
+            <div id="duty-edit-{{ duty.duty_id }}" style="display:none;" class="flex-grow-1">
+                <form hx-put="{{ url_for('duty_edit', id=duty.duty_id) }}"
+                      hx-target="#duty-{{ duty.duty_id }}"
+                      hx-swap="outerHTML">
+                    <div class="mb-2">
+                        <input type="text" class="form-control form-control-sm" name="duty_header" 
+                               value="{{ duty.duty_header }}" placeholder="Duty Header" required>
+                    </div>
+                    <div class="mb-2">
+                        <textarea class="form-control form-control-sm" name="duty_desc" rows="3" 
+                                  placeholder="Duty Description">{{ duty.duty_desc or '' }}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label form-label-sm mb-1" 
+                               data-bs-toggle="tooltip" 
+                               data-bs-placement="top" 
+                               title="Controls the display order of duties. Lower numbers appear first.">
+                            Sort Order
+                        </label>
+                        <input type="number" class="form-control form-control-sm" name="sort_order" 
+                               value="{{ duty.sort_order }}" style="width: 100px;">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-success">
+                        <i class="bi bi-check"></i> Save
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary" 
+                            onclick="toggleDutyEdit({{ duty.duty_id }})">
+                        <i class="bi bi-x"></i> Cancel
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" 
+                            hx-delete="{{ url_for('duty_delete', id=duty.duty_id) }}"
+                            hx-target="#duty-{{ duty.duty_id }}"
+                            hx-swap="outerHTML"
+                            hx-on="htmx:afterRequest: saveDeletedDuty(event, {{ duty.duty_id }}, '{{ duty.duty_header|replace("'", "\\'") }}', '{{ duty.duty_desc|replace("'", "\\'") }}', {{ duty.sort_order }}, {{ duty.role_id }})">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+            <div class="btn-group btn-group-sm" role="group">
+                <button class="btn btn-outline-warning" 
+                        onclick="toggleDutyEdit({{ duty.duty_id }})"
+                        title="Edit">
+                    <i class="bi bi-pencil"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

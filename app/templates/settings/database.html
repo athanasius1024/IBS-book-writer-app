@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Database Settings - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-database"></i> Database Settings
+        </h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">PostgreSQL Connection</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="dbConfigForm">
+                    <div class="mb-3">
+                        <label for="host" class="form-label">Host</label>
+                        <input type="text" class="form-control" id="host" name="host" 
+                               value="{{ config.host }}" required>
+                        <small class="form-text text-muted">Database server hostname or IP address</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="port" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="port" name="port" 
+                               value="{{ config.port }}" required>
+                        <small class="form-text text-muted">Default PostgreSQL port is 5432</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="database" class="form-label">Database Name</label>
+                        <input type="text" class="form-control" id="database" name="database" 
+                               value="{{ config.database }}" required>
+                        <small class="form-text text-muted">Name of the PostgreSQL database</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="user" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="user" name="user" 
+                               value="{{ config.user }}" required>
+                        <small class="form-text text-muted">PostgreSQL user with access to the database</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               value="{{ config.password }}" required>
+                        <small class="form-text text-muted">Password for the PostgreSQL user</small>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-info" onclick="testConnection()">
+                            <i class="bi bi-wifi"></i> Test Connection
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Configuration
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+                
+                <div id="testResult" class="mt-3" style="display: none;">
+                    <!-- Test result will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Help</h5>
+            </div>
+            <div class="card-body">
+                <h6>Database Setup</h6>
+                <p class="small">Ensure you have:</p>
+                <ul class="small">
+                    <li>PostgreSQL 13+ installed</li>
+                    <li>Created the database: <code>db_terran_society</code></li>
+                    <li>Created the schema: <code>scm_terran_society</code></li>
+                    <li>User with proper permissions</li>
+                </ul>
+                
+                <h6 class="mt-3">Quick Commands</h6>
+                <pre class="small bg-light p-2"><code>createdb db_terran_society
+psql db_terran_society \
+  -f scripts/pg_schema.sql</code></pre>
+                
+                <div class="alert alert-warning small mt-3">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    <strong>Note:</strong> You must restart the application after saving for changes to take effect.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function testConnection() {
+    const testBtn = event.target;
+    const originalText = testBtn.innerHTML;
+    testBtn.disabled = true;
+    testBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Testing...';
+    
+    const config = {
+        host: document.getElementById('host').value,
+        port: parseInt(document.getElementById('port').value),
+        database: document.getElementById('database').value,
+        user: document.getElementById('user').value,
+        password: document.getElementById('password').value
+    };
+    
+    fetch('{{ url_for("test_database_connection") }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(config)
+    })
+    .then(response => response.json())
+    .then(data => {
+        testBtn.disabled = false;
+        testBtn.innerHTML = originalText;
+        
+        const resultDiv = document.getElementById('testResult');
+        resultDiv.style.display = 'block';
+        
+        if (data.success) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> <strong>Success!</strong><br>
+                    ${data.message}<br>
+                    <small class="text-muted">${data.version}</small>
+                </div>
+            `;
+        } else {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-x-circle"></i> <strong>Error!</strong><br>
+                    ${data.error}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        testBtn.disabled = false;
+        testBtn.innerHTML = originalText;
+        
+        const resultDiv = document.getElementById('testResult');
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-x-circle"></i> <strong>Error!</strong><br>
+                ${error.message}
+            </div>
+        `;
+    });
+}
+</script>
+{% endblock %}

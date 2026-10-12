@@ -1,0 +1,79 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+env/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+.pgpass
+*.sql.backup
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+.env.local
+config/secrets.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+temp/
+tmp/
+
+# Backups
+*.bak
+*.backup
+
+# Source documents and reference materials (not for public repo)
+inputs/
+reference/
+book/
+db/
+docs/
+
+# Document files
+*.odt
+*.odp
+*.pdf
+*.docx
+*.ppt
+*.pptx
+
+# Project-specific files to exclude
+WARP.md
+STATUS.md
+Book_outline.md
+POSTGRESQL_SETUP.md
+WhatisTerranSociety.pdf
+trifold-*.odt
+ts-*.odp
+council-of-elders.txt
+NewShapPrize*.txt
+Claude_Prompt*.txt
+Council_of_Elders*.txt
+INSTALL_LATEX.txt
+Global Challenges*
+
+# Data population scripts (organization-specific)
+scripts/populate_*.py

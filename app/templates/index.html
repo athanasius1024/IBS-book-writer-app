@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </h1>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('tiers_list') }}" class="text-decoration-none">
+            <div class="card text-white bg-primary stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-layers"></i> Tiers
+                    </h5>
+                    <h2 class="card-text">{{ stats.tiers }}</h2>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('branches_list') }}" class="text-decoration-none">
+            <div class="card text-white bg-info stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-diagram-2"></i> Branches
+                    </h5>
+                    <h2 class="card-text">{{ stats.branches }}</h2>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('institutions_list') }}" class="text-decoration-none">
+            <div class="card text-white bg-success stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-building"></i> Institutions
+                    </h5>
+                    <h2 class="card-text">{{ stats.institutions }}</h2>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('roles_list') }}" class="text-decoration-none">
+            <div class="card text-white bg-warning stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-person-badge"></i> Roles
+                    </h5>
+                    <h2 class="card-text">{{ stats.roles }}</h2>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('roles_list') }}" class="text-decoration-none">
+            <div class="card text-white bg-danger stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-list-check"></i> Duties
+                    </h5>
+                    <h2 class="card-text">{{ stats.duties }}</h2>
+                    <small>View in Roles</small>
+                </div>
+            </div>
+        </a>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('processes_list') }}" class="text-decoration-none">
+            <div class="card text-white bg-secondary stat-card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-diagram-3"></i> Processes
+                    </h5>
+                    <h2 class="card-text">{{ stats.processes }}</h2>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Recent Activity and Book Status -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Recently Modified Roles
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_roles %}
+                    <ul class="list-group list-group-flush">
+                        {% for role in recent_roles %}
+                            <li class="list-group-item">
+                                <a href="{{ url_for('role_detail', id=role.role_id) }}">
+                                    {{ role.role_name }}
+                                </a>
+                                <br>
+                                <small class="text-muted">
+                                    {{ role.institution.institution_name }} - 
+                                    Modified: {{ role.modified_at.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No recent modifications</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-file-earmark-text"></i> Book Status
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if book_stats %}
+                    <p><strong>Size:</strong> {{ "%.2f"|format(book_stats.size / 1024) }} KB</p>
+                    <p><strong>Last Modified:</strong> {{ book_stats.modified.strftime('%Y-%m-%d %H:%M') }}</p>
+                    
+                    <!-- Generate Book -->
+                    <form method="POST" action="{{ url_for('generate_book') }}" class="mb-2">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-arrow-clockwise"></i> Regenerate Book (Markdown)
+                        </button>
+                    </form>
+                    
+                    <!-- Generate PDF -->
+                    <button onclick="generateAndOpenPDF(event)" class="btn btn-danger w-100 mb-2">
+                        <i class="bi bi-file-earmark-pdf"></i> Generate PDF
+                    </button>
+                    
+                    <!-- View HTML -->
+                    <a href="{{ url_for('view_html') }}" target="_blank" class="btn btn-info w-100 mb-2">
+                        <i class="bi bi-file-earmark-code"></i> View HTML Version
+                    </a>
+                    
+                    <!-- Download Files -->
+                    <a href="{{ url_for('download_markdown') }}" class="btn btn-outline-secondary w-100 mb-2">
+                        <i class="bi bi-download"></i> Download Markdown
+                    </a>
+                    
+                    <p class="text-muted small mb-0">
+                        <i class="bi bi-info-circle"></i> Professional PDF with table of contents, page numbers, and proper formatting.
+                    </p>
+                {% else %}
+                    <p class="text-muted">Book not yet generated</p>
+                    <form method="POST" action="{{ url_for('generate_book') }}">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-file-earmark-text"></i> Generate Book
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning"></i> Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('institution_new') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-plus-circle"></i> New Institution
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('role_new') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-plus-circle"></i> New Role
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('process_new') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-plus-circle"></i> New Process
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('book_metadata') }}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-gear"></i> Book Settings
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function generateAndOpenPDF(event) {
+    console.log('generateAndOpenPDF called');
+    
+    // Show loading state
+    const btn = event.target;
+    console.log('Button:', btn);
+    const originalHTML = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...';
+    
+    const url = '{{ url_for("generate_pdf") }}';
+    console.log('Fetching URL:', url);
+    
+    // Call generation endpoint
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => {
+        console.log('Response received:', response);
+        console.log('Response status:', response.status);
+        console.log('Response ok:', response.ok);
+        if (!response.ok) {
+            throw new Error('HTTP error ' + response.status);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Response data:', data);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        
+        if (data.success) {
+            // Open PDF in new tab
+            const pdfUrl = '{{ url_for("view_pdf") }}';
+            console.log('Opening PDF in new tab:', pdfUrl);
+            const newWindow = window.open(pdfUrl, '_blank');
+            console.log('New window:', newWindow);
+            if (!newWindow) {
+                alert('Please allow pop-ups for this site to view the PDF.');
+            }
+        } else {
+            console.error('PDF generation failed:', data.error);
+            alert('Error generating PDF: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Fetch error:', error);
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        alert('Error generating PDF: ' + error.message);
+    });
+}
+</script>
+{% endblock %}

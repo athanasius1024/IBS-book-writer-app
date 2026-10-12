@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Branches - Terran Society{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1><i class="bi bi-diagram-3"></i> Branches</h1>
+    </div>
+</div>
+
+<!-- Branches List -->
+{% if branches %}
+    <div class="row">
+        {% for branch in branches %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-warning">
+                        <h5 class="mb-0">{{ branch.branch_name }}</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if branch.branch_header %}
+                            <p class="fw-bold">{{ branch.branch_header }}</p>
+                        {% endif %}
+                        {% if branch.branch_desc %}
+                            <p class="text-muted small">{{ branch.branch_desc[:100] }}{% if branch.branch_desc|length > 100 %}...{% endif %}</p>
+                        {% endif %}
+                        <p><strong>Institutions:</strong> {{ branch.institutions|length }}</p>
+                        <p><strong>Sort Order:</strong> {{ branch.sort_order }}</p>
+                    </div>
+                    <div class="card-footer">
+                        <a href="{{ url_for('branch_detail', id=branch.branch_id) }}" class="btn btn-sm btn-info">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No branches found.
+    </div>
+{% endif %}
+{% endblock %}
