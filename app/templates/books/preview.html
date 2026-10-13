@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import cover_box, status_badge %}
+{% block title %}Preview: {{ book.title }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.dashboard') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item active">Preview</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Preview {{ status_badge(book) }}</h1>
+    <a href="{{ url_for('covers.layout', book_id=book.book_id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-layout-three-columns"></i> Flat cover layout
+    </a>
+</div>
+
+<div class="book-preview">
+    {% set front = book.cover('front') %}
+    {% set inside_front = book.cover('inside_front') %}
+    {% set inside_back = book.cover('inside_back') %}
+    {% set back = book.cover('back') %}
+
+    {% if front %}<section class="preview-page">{{ cover_box(front, 'cover-full') }}</section>{% endif %}
+    {% if inside_front %}<section class="preview-page">{{ cover_box(inside_front, 'cover-full') }}</section>{% endif %}
+
+    <section class="preview-page title-page text-center">
+        <h1 class="display-5">{{ book.title }}</h1>
+        {% if book.subtitle %}<h3 class="text-muted">{{ book.subtitle }}</h3>{% endif %}
+        {% if book.author_name %}<p class="lead mt-4">{{ book.author_name }}</p>{% endif %}
+        {% if book.copyright_year or book.copyright_holder %}
+        <p class="small text-muted mt-5">&copy; {{ book.copyright_year or '' }} {{ book.copyright_holder or '' }}</p>
+        {% endif %}
+    </section>
+
+    {% for chapter in book.chapters %}
+    <section class="preview-page">
+        <h2>{{ loop.index }}. {{ chapter.title }}</h2>
+        {% for block in chapter.blocks %}
+            <div class="content-text">{{ block.content_text | markdown }}</div>
+        {% else %}
+            <p class="text-muted fst-italic">This chapter has no content yet.</p>
+        {% endfor %}
+    </section>
+    {% else %}
+    <section class="preview-page"><p class="text-muted fst-italic">This book has no chapters yet.</p></section>
+    {% endfor %}
+
+    {% if inside_back %}<section class="preview-page">{{ cover_box(inside_back, 'cover-full') }}</section>{% endif %}
+    {% if back %}<section class="preview-page">{{ cover_box(back, 'cover-full') }}</section>{% endif %}
+</div>
+{% endblock %}

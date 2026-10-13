@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}{{ 'New Book' if is_new else 'Edit Book' }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+{% set f = request.form %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <h1 class="mb-4">
+            <i class="bi bi-{{ 'plus-circle' if is_new else 'pencil' }}"></i>
+            {{ 'New Book' if is_new else 'Edit Book Details' }}
+        </h1>
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    {{ csrf_field() }}
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="title" name="title" maxlength="300"
+                               value="{{ f.get('title', book.title or '') }}" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label for="subtitle" class="form-label">Subtitle</label>
+                        <input type="text" class="form-control" id="subtitle" name="subtitle"
+                               value="{{ f.get('subtitle', book.subtitle or '') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="author_name" class="form-label">Author(s)</label>
+                        <input type="text" class="form-control" id="author_name" name="author_name"
+                               value="{{ f.get('author_name', book.author_name or '') }}">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="copyright_holder" class="form-label">Copyright holder</label>
+                            <input type="text" class="form-control" id="copyright_holder" name="copyright_holder"
+                                   value="{{ f.get('copyright_holder', book.copyright_holder or '') }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="copyright_year" class="form-label">Year</label>
+                            <input type="number" class="form-control" id="copyright_year" name="copyright_year" min="1" max="9999"
+                                   value="{{ f.get('copyright_year', book.copyright_year or '') }}">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label for="version" class="form-label">Version</label>
+                            <input type="text" class="form-control" id="version" name="version" maxlength="20"
+                                   value="{{ f.get('version', book.version or '0.1') }}">
+                        </div>
+                    </div>
+                    {% if is_new %}
+                    <p class="form-text">The five cover panels (front, spine, back and both insides) are created for you and can be edited next.</p>
+                    {% endif %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ 'Create Book' if is_new else 'Save' }}</button>
+                        <a href="{{ url_for('books.dashboard') if is_new else url_for('books.detail', book_id=book.book_id) }}"
+                           class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

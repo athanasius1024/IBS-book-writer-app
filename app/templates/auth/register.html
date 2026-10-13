@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}Create account - IBS Book Writer{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-person-plus"></i> Create account</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ csrf_field() }}
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               value="{{ username }}" minlength="3" maxlength="50"
+                               pattern="[A-Za-z0-9_.\-]+" autocomplete="username" required autofocus>
+                        <div class="form-text">3-50 characters: letters, numbers, dot, dash, underscore.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               minlength="{{ min_len }}" autocomplete="new-password" required>
+                        <div class="form-text">At least {{ min_len }} characters.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirm_password" class="form-label">Confirm password</label>
+                        <input type="password" class="form-control" id="confirm_password" name="confirm_password"
+                               minlength="{{ min_len }}" autocomplete="new-password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Create account</button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <small>Already registered? <a href="{{ url_for('auth.login') }}">Log in</a></small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

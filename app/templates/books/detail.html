@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field, status_badge %}
+{% block title %}{{ book.title }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.dashboard') }}">My Books</a></li>
+        <li class="breadcrumb-item active">{{ book.title }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+    <div>
+        <h1 class="mb-1">{{ book.title }} {{ status_badge(book) }}</h1>
+        {% if book.subtitle %}<h5 class="text-muted">{{ book.subtitle }}</h5>{% endif %}
+        <p class="text-muted mb-0">
+            {% if book.author_name %}by {{ book.author_name }} &middot; {% endif %}v{{ book.version }}
+            {% if book.copyright_year %}&middot; &copy; {{ book.copyright_year }} {{ book.copyright_holder or '' }}{% endif %}
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('books.preview', book_id=book.book_id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-book"></i> Preview
+        </a>
+        <a href="{{ url_for('covers.editor', book_id=book.book_id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-card-image"></i> {{ 'View' if book.is_completed else 'Edit' }} Cover
+        </a>
+        {% if book.is_completed %}
+            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#copyModal">
+                <i class="bi bi-files"></i> Create Editable Copy
+            </button>
+        {% else %}
+            <a href="{{ url_for('books.edit', book_id=book.book_id) }}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i> Edit Details
+            </a>
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#completeModal">
+                <i class="bi bi-check2-circle"></i> Mark as Completed
+            </button>
+        {% endif %}
+        <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+</div>
+
+{% if book.is_completed %}
+<div class="alert alert-info">
+    <i class="bi bi-lock-fill"></i>
+    <strong>Completed{% if book.completed_at %} on {{ book.completed_at.strftime('%Y-%m-%d') }}{% endif %}.</strong>
+    This book is read-only. To make changes, create an editable copy &mdash; the completed original stays untouched.
+</div>
+{% endif %}
+{% if book.derived_from %}
+<p class="small text-muted"><i class="bi bi-files"></i> Created as a copy of
+    <a href="{{ url_for('books.detail', book_id=book.derived_from.book_id) }}">{{ book.derived_from.title }}</a>.</p>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-list-ol"></i> Chapters</h5>
+    </div>
+    <ul class="list-group list-group-flush">
+        {% for chapter in book.chapters %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('chapters.chapter_edit', chapter_id=chapter.chapter_id) }}" class="text-decoration-none">
+                {{ loop.index }}. {{ chapter.title }}
+                <span class="badge bg-light text-dark border ms-2">{{ chapter.blocks | length }} block{{ '' if chapter.blocks | length == 1 else 's' }}</span>
+            </a>
+            {% if not book.is_completed %}
+            <div class="d-flex gap-1">
+                <form method="POST" action="{{ url_for('chapters.chapter_move', chapter_id=chapter.chapter_id) }}">
+                    {{ csrf_field() }}<input type="hidden" name="direction" value="up">
+                    <button class="btn btn-sm btn-outline-secondary" title="Move up" {{ 'disabled' if loop.first }}><i class="bi bi-arrow-up"></i></button>
+                </form>
+                <form method="POST" action="{{ url_for('chapters.chapter_move', chapter_id=chapter.chapter_id) }}">
+                    {{ csrf_field() }}<input type="hidden" name="direction" value="down">
+                    <button class="btn btn-sm btn-outline-secondary" title="Move down" {{ 'disabled' if loop.last }}><i class="bi bi-arrow-down"></i></button>
+                </form>
+                <form method="POST" action="{{ url_for('chapters.chapter_delete', chapter_id=chapter.chapter_id) }}"
+                      onsubmit="return confirm('Delete this chapter and all of its content?');">
+                    {{ csrf_field() }}
+                    <button class="btn btn-sm btn-outline-danger" title="Delete chapter"><i class="bi bi-trash"></i></button>
+                </form>
+            </div>
+            {% endif %}
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">No chapters yet.</li>
+        {% endfor %}
+    </ul>
+    {% if not book.is_completed %}
+    <div class="card-footer">
+        <form method="POST" action="{{ url_for('chapters.chapter_new', book_id=book.book_id) }}" class="row g-2">
+            {{ csrf_field() }}
+            <div class="col">
+                <input type="text" class="form-control" name="title" placeholder="New chapter title" maxlength="300" required>
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-primary"><i class="bi bi-plus-circle"></i> Add Chapter</button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+{# ---- Modals ---- #}
+<div class="modal fade" id="completeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('books.complete', book_id=book.book_id) }}" class="modal-content">
+            {{ csrf_field() }}
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-check2-circle"></i> Mark book as completed?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Once completed, <strong>{{ book.title }}</strong> becomes <strong>read-only</strong>: its details,
+                   cover and chapters can no longer be changed.</p>
+                <p class="mb-0">You can still make changes later by creating an editable copy.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-success">Mark as Completed</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="copyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('books.copy', book_id=book.book_id) }}" class="modal-content">
+            {{ csrf_field() }}
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle"></i> Open a copy to edit?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>{{ book.title }}</strong> is marked completed and is protected from changes.</p>
+                <p class="mb-0">This will create a <strong>new draft copy</strong> (title, cover and all chapters) that you
+                   can edit freely. The completed original will stay exactly as it is.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-warning">Create Editable Copy</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ url_for('books.delete', book_id=book.book_id) }}" class="modal-content">
+            {{ csrf_field() }}
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="bi bi-trash"></i> Delete this book?</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">This permanently deletes <strong>{{ book.title }}</strong>, including its cover and all
+                   chapters. This cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-danger">Delete Book</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

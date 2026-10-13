@@ -1,17 +1,9 @@
-# Flask web framework
 Flask==3.0.0
 Flask-SQLAlchemy==3.1.1
-
-# PostgreSQL database adapter
-psycopg2-binary==2.9.9
-
-# PDF generation
-WeasyPrint==60.2
-markdown==3.5.1
-
-# HTML parsing for glossary links
-beautifulsoup4==4.12.2
-lxml==4.9.3
-
-# Additional utilities
+SQLAlchemy==2.0.36
+psycopg2-binary>=2.9.10
+Flask-WTF==1.2.1
+Flask-Login==0.6.3
+Markdown==3.5.1
+bleach==6.1.0
 python-dotenv==1.0.0

@@ -1,109 +1,62 @@
-# Terran Society Book and Database
+# IBS Book Writer
 
-A comprehensive project documenting and organizing information about the Terran Society framework, including book content, database schema, and reference materials.
+A small multi-user web app for writing books. Each user logs in with a username and password, can keep any number of books, and edits each book's details, cover and chapters in the browser.
 
-## Project Overview
+## Features
 
-This project combines documentation, database design, and content creation for the Terran Society initiative. It includes:
+- **Accounts**: username + simple password (minimum 8 characters, stored hashed). The first account created is the administrator.
+- **Multiple books per user**: a "My Books" dashboard; each book belongs to one user and is invisible to everyone else.
+- **Book cover**: five editable panels per book - front, spine (binding), back, inside front and inside back - each with Markdown text, background/text colors and an optional image. A flat wrap-around layout view shows how the panels fit together.
+- **Chapters**: ordered chapters made of Markdown content blocks (add, edit, reorder, delete).
+- **Completed books**: mark a book as completed to make it read-only. To change it later, "Create Editable Copy" shows a warning and makes a new draft (cover, chapters and all); the completed original is never modified.
+- **Preview**: read-only HTML preview of covers and chapters.
 
-- **Web Application**: Flask-based manager for organizational data and book generation
-- **Book Content**: Structured chapters and content for the Terran Society book
-- **Database**: PostgreSQL database schema and management for organizing Terran Society data
-- **Reference Materials**: Supporting documents, presentations, and historical materials
-- **Scripts**: Utilities for database management and content generation
+## Quick start
 
-## Web Application
-
-## Quick Start
-
-### 1. Set up the database (first time only):
+Requirements: Python 3.10+, PostgreSQL 13+ (psql client).
 
 ```bash
-./setup_database.sh
+./setup_database.sh   # creates db_ibs_bookwriter + tables, writes connection settings to .env
+./start.sh            # creates .venv, installs dependencies, starts the app
 ```
 
-This interactive script will prompt you for PostgreSQL credentials and set up everything automatically.
+Open <http://127.0.0.1:5000> and create your account at `/register`.
 
-### 2. Launch the web application:
+`start.sh` generates a `SECRET_KEY` in `.env` on first run. `.env` is git-ignored and mode 600. See `.env.template` for all settings (database, `ALLOW_REGISTRATION`, `SESSION_COOKIE_SECURE`, `UPLOAD_DIR`, `HOST`, `PORT`).
 
-```bash
-./start.sh
-```
-
-Then open your browser to: **http://localhost:5000**
-
-### Features
-
-- 📊 **Data Management**: Web interface for managing tiers, branches, institutions, roles, and duties
-- 📖 **Book Generation**: Generate professional PDF and HTML books with one click
-- 🔗 **Glossary Linking**: Automatic hyperlinking of terms in generated books
-- ⚙️ **Database Configuration**: Configure PostgreSQL connection through web interface
-- 🎨 **Modern UI**: Responsive Bootstrap design with intuitive navigation
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for complete installation and deployment instructions.
-
-## Project Structure
+## Project layout
 
 ```
-.
-├── book/           # Book chapters and content
-├── db/             # Database schema and SQL files
-├── inputs/         # Source materials and inputs
-├── reference/      # Reference documents and materials
-├── scripts/        # Utility scripts
-├── .venv/          # Python virtual environment
-└── docs/           # Additional documentation
+app/
+  ibsbook.py          application factory / entry point
+  config.py           environment-based configuration
+  models.py           User, Book, BookCover, Chapter, ContentBlock, MediaAsset
+  auth.py             login / register / logout
+  books.py            dashboard, create/edit, complete, copy, delete, preview
+  covers.py           cover editor
+  chapters.py         chapters and content blocks
+  media.py            image upload + owner-only file serving
+  settings_routes.py  admin-only database settings
+  access.py           ownership checks and the completed-book edit lock
+  templates/, static/
+sql/schema.sql        PostgreSQL schema (schema scm_bookwriter)
+scripts/set_env.py    helper used by the shell scripts to update .env
+tests/                pytest suite (runs on in-memory SQLite)
 ```
-
-## Database Setup
-
-The project uses PostgreSQL 17 for data management. See `POSTGRESQL_SETUP.md` for detailed setup instructions.
-
-**Database Configuration:**
-- Server: PostgreSQL 17
-- User: rock
-- Password: river
-- Database: db_kirby
-- Schema: scm_kirby
-
-## Getting Started
-
-1. **Clone or navigate to the repository**
-   ```bash
-   cd /media/infodine/LaCie/z_stash/z-terran/TerranSocietyBook/infobuild
-   ```
-
-2. **Activate Python virtual environment** (if needed)
-   ```bash
-   source .venv/bin/activate
-   ```
-
-3. **Set up the database**
-   Follow instructions in `POSTGRESQL_SETUP.md`
-
-4. **Review existing content**
-   - Check `Book_outline.md` for book structure
-   - Review `STATUS.md` for current project status
-   - Explore the `book/` directory for content
-
-## Documentation
-
-- `Book_outline.md` - Outline and structure of the book
-- `POSTGRESQL_SETUP.md` - Database setup and configuration
-- `STATUS.md` - Current project status and progress
-- `WhatisTerranSociety.pdf` - Overview document
 
 ## Development
 
-This project uses:
-- Python (virtual environment in `.venv/`)
-- PostgreSQL 17
-- Git for version control
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m pytest tests
+IBS_DEBUG=1 ./start.sh   # auto-reload + debugger (local use only)
+```
 
-## Contributing
+## Security notes
 
-This is a personal project for documenting and organizing Terran Society materials.
-
-## License
-
-Copyright © Terran Society Project
+- Passwords are hashed with Werkzeug (`scrypt`/`pbkdf2`); login errors don't reveal whether a username exists.
+- All state-changing requests are CSRF-protected (including HTMX requests).
+- Every book/cover/chapter/block/media lookup is filtered by the logged-in user; other users' records return 404.
+- Completed books are protected on the server, not just hidden in the UI.
+- Uploaded images are type-checked by extension and file signature, stored outside `static/`, and served only to their owner. User Markdown is sanitised before display.
+- Serve behind HTTPS in production and set `SESSION_COOKIE_SECURE=1`. See [DEPLOYMENT.md](DEPLOYMENT.md).

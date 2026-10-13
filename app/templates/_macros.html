@@ -1,0 +1,20 @@
+{% macro csrf_field() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro status_badge(book) %}
+    {% if book.is_completed %}
+        <span class="badge bg-success"><i class="bi bi-lock-fill"></i> Completed</span>
+    {% else %}
+        <span class="badge bg-warning text-dark"><i class="bi bi-pencil"></i> Draft</span>
+    {% endif %}
+{% endmacro %}
+
+{# Renders one cover panel as a coloured box with optional image and markdown text. #}
+{% macro cover_box(cover, extra_class='') %}
+    <div class="cover-box {{ extra_class }}"
+         style="background-color: {{ cover.background_color }}; color: {{ cover.text_color }};">
+        {% if cover.asset_id %}
+            <img src="{{ url_for('media.serve', asset_id=cover.asset_id) }}" alt="{{ cover.label }} image" class="cover-image">
+        {% endif %}
+        <div class="cover-text">{{ (cover.content_text or '') | markdown }}</div>
+    </div>
+{% endmacro %}

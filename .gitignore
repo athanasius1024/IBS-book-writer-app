@@ -11,6 +11,7 @@ build/
 venv/
 ENV/
 env/
+.pytest_cache/
 
 # Database
 *.db
@@ -19,6 +20,15 @@ env/
 .pgpass
 *.sql.backup
 
+# Secrets and local configuration (never commit)
+.env
+.env.local
+config/db_config.json
+config/secrets.ini
+
+# User uploads (cover images)
+/uploads/
+
 # IDE
 .vscode/
 .idea/
@@ -26,11 +36,6 @@ env/
 *.swo
 *~
 .DS_Store
-
-# Environment variables
-.env
-.env.local
-config/secrets.ini
 
 # Logs
 *.log
@@ -44,36 +49,3 @@ tmp/
 # Backups
 *.bak
 *.backup
-
-# Source documents and reference materials (not for public repo)
-inputs/
-reference/
-book/
-db/
-docs/
-
-# Document files
-*.odt
-*.odp
-*.pdf
-*.docx
-*.ppt
-*.pptx
-
-# Project-specific files to exclude
-WARP.md
-STATUS.md
-Book_outline.md
-POSTGRESQL_SETUP.md
-WhatisTerranSociety.pdf
-trifold-*.odt
-ts-*.odp
-council-of-elders.txt
-NewShapPrize*.txt
-Claude_Prompt*.txt
-Council_of_Elders*.txt
-INSTALL_LATEX.txt
-Global Challenges*
-
-# Data population scripts (organization-specific)
-scripts/populate_*.py

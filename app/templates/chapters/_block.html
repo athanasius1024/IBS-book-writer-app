@@ -1,0 +1,30 @@
+<div class="card mb-3 content-block" id="block-{{ block.block_id }}">
+    <div class="card-body">
+        <div class="content-text">{{ block.content_text | markdown }}</div>
+    </div>
+    {% if not book.is_completed %}
+    <div class="card-footer bg-transparent d-flex gap-1 justify-content-end">
+        <form method="POST" action="{{ url_for('chapters.block_move', block_id=block.block_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="direction" value="up">
+            <button class="btn btn-sm btn-outline-secondary" title="Move up"><i class="bi bi-arrow-up"></i></button>
+        </form>
+        <form method="POST" action="{{ url_for('chapters.block_move', block_id=block.block_id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="direction" value="down">
+            <button class="btn btn-sm btn-outline-secondary" title="Move down"><i class="bi bi-arrow-down"></i></button>
+        </form>
+        <button class="btn btn-sm btn-outline-primary" title="Edit"
+                hx-get="{{ url_for('chapters.block_edit_form', block_id=block.block_id) }}"
+                hx-target="#block-{{ block.block_id }}" hx-swap="outerHTML">
+            <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-danger" title="Delete"
+                hx-delete="{{ url_for('chapters.block_delete', block_id=block.block_id) }}"
+                hx-confirm="Delete this content block?"
+                hx-target="#block-{{ block.block_id }}" hx-swap="outerHTML">
+            <i class="bi bi-trash"></i>
+        </button>
+    </div>
+    {% endif %}
+</div>

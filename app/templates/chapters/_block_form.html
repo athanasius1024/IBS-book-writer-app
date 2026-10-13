@@ -1,0 +1,14 @@
+<div class="card mb-3 content-block" id="block-{{ block.block_id }}">
+    <form hx-post="{{ url_for('chapters.block_save', block_id=block.block_id) }}"
+          hx-target="#block-{{ block.block_id }}" hx-swap="outerHTML">
+        <div class="card-body">
+            <textarea class="form-control" name="content_text" rows="8" required>{{ block.content_text }}</textarea>
+        </div>
+        <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
+            <button type="button" class="btn btn-sm btn-secondary"
+                    hx-get="{{ url_for('chapters.block_view', block_id=block.block_id) }}"
+                    hx-target="#block-{{ block.block_id }}" hx-swap="outerHTML">Cancel</button>
+            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-save"></i> Save</button>
+        </div>
+    </form>
+</div>

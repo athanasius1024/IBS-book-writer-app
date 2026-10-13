@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}Log in - IBS Book Writer{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-box-arrow-in-right"></i> Log in</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" autocomplete="on">
+                    {{ csrf_field() }}
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               autocomplete="username" required autofocus>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password"
+                               autocomplete="current-password" required>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Log in</button>
+                    </div>
+                </form>
+            </div>
+            {% if registration_open %}
+            <div class="card-footer text-center">
+                <small>No account yet? <a href="{{ url_for('auth.register') }}">Create one</a></small>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "_macros.html" import cover_box, status_badge %}
+{% block title %}Cover layout: {{ book.title }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.dashboard') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('covers.editor', book_id=book.book_id) }}">Cover</a></li>
+        <li class="breadcrumb-item active">Flat layout</li>
+    </ol>
+</nav>
+
+<h1 class="mb-3">Cover layout {{ status_badge(book) }}</h1>
+
+{% set back = book.cover('back') %}
+{% set spine = book.cover('spine') %}
+{% set front = book.cover('front') %}
+{% set inside_front = book.cover('inside_front') %}
+{% set inside_back = book.cover('inside_back') %}
+
+<h5 class="text-muted">Outside (back &middot; spine &middot; front)</h5>
+<div class="cover-wrap mb-5">
+    {% if back %}<div class="cover-wrap-back">{{ cover_box(back, 'cover-flat') }}</div>{% endif %}
+    {% if spine %}<div class="cover-wrap-spine">{{ cover_box(spine, 'cover-flat cover-spine-flat') }}</div>{% endif %}
+    {% if front %}<div class="cover-wrap-front">{{ cover_box(front, 'cover-flat') }}</div>{% endif %}
+</div>
+
+<h5 class="text-muted">Inside (inside front &middot; inside back)</h5>
+<div class="cover-wrap">
+    {% if inside_front %}<div class="cover-wrap-inside">{{ cover_box(inside_front, 'cover-flat') }}</div>{% endif %}
+    {% if inside_back %}<div class="cover-wrap-inside">{{ cover_box(inside_back, 'cover-flat') }}</div>{% endif %}
+</div>
+{% endblock %}

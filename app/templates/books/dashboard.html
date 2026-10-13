@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field, status_badge %}
+{% block title %}My Books - IBS Book Writer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0"><i class="bi bi-collection"></i> My Books</h1>
+    <a href="{{ url_for('books.new') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> New Book
+    </a>
+</div>
+
+{% if not books %}
+<div class="text-center py-5 text-muted">
+    <i class="bi bi-journal-plus display-3"></i>
+    <p class="lead mt-3">You don't have any books yet.</p>
+    <a href="{{ url_for('books.new') }}" class="btn btn-primary">Create your first book</a>
+</div>
+{% else %}
+<div class="row g-3">
+    {% for book in books %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title mb-0">
+                        <a href="{{ url_for('books.detail', book_id=book.book_id) }}" class="text-decoration-none">{{ book.title }}</a>
+                    </h5>
+                    {{ status_badge(book) }}
+                </div>
+                {% if book.subtitle %}<p class="card-subtitle text-muted mb-2">{{ book.subtitle }}</p>{% endif %}
+                <p class="small mb-1">
+                    {% if book.author_name %}<i class="bi bi-person"></i> {{ book.author_name }}<br>{% endif %}
+                    <i class="bi bi-list-ol"></i> {{ book.chapters | length }} chapter{{ '' if book.chapters | length == 1 else 's' }}
+                    &middot; v{{ book.version }}
+                </p>
+                <p class="small text-muted mb-0">
+                    Last modified {{ book.modified_at.strftime('%Y-%m-%d %H:%M') if book.modified_at else '' }} UTC
+                    {% if book.derived_from_book_id %}<br><i class="bi bi-files"></i> Copy of an earlier book{% endif %}
+                </p>
+            </div>
+            <div class="card-footer bg-transparent d-flex flex-wrap gap-2">
+                <a href="{{ url_for('books.detail', book_id=book.book_id) }}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-{{ 'eye' if book.is_completed else 'pencil' }}"></i> {{ 'Open' if book.is_completed else 'Edit' }}
+                </a>
+                <a href="{{ url_for('covers.editor', book_id=book.book_id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-card-image"></i> Cover
+                </a>
+                <a href="{{ url_for('books.preview', book_id=book.book_id) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-book"></i> Preview
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

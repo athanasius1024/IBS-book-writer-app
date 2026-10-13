@@ -1,0 +1,54 @@
+{% from "_macros.html" import cover_box %}
+<div class="card cover-panel h-100" id="cover-panel-{{ cover.panel }}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <strong>{{ cover.label }}</strong>
+        {% if saved %}<span class="badge bg-success"><i class="bi bi-check"></i> Saved</span>{% endif %}
+    </div>
+    <div class="card-body">
+        {% if error %}<div class="alert alert-danger py-2">{{ error }}</div>{% endif %}
+
+        {{ cover_box(cover, 'cover-mini' ~ (' cover-spine-mini' if cover.panel == 'spine' else '')) }}
+
+        <form class="mt-3"
+              hx-post="{{ url_for('covers.save_panel', book_id=book.book_id, panel=cover.panel) }}"
+              hx-encoding="multipart/form-data"
+              hx-target="#cover-panel-{{ cover.panel }}"
+              hx-swap="outerHTML"
+              method="POST" enctype="multipart/form-data"
+              action="{{ url_for('covers.save_panel', book_id=book.book_id, panel=cover.panel) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <fieldset {{ 'disabled' if book.is_completed }}>
+                <div class="mb-3">
+                    <label class="form-label" for="text-{{ cover.panel }}">Text (Markdown)</label>
+                    <textarea class="form-control" id="text-{{ cover.panel }}" name="content_text" rows="5">{{ cover.content_text or '' }}</textarea>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label" for="bg-{{ cover.panel }}">Background</label>
+                        <input type="color" class="form-control form-control-color w-100" id="bg-{{ cover.panel }}"
+                               name="background_color" value="{{ cover.background_color }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label" for="fg-{{ cover.panel }}">Text color</label>
+                        <input type="color" class="form-control form-control-color w-100" id="fg-{{ cover.panel }}"
+                               name="text_color" value="{{ cover.text_color }}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label" for="img-{{ cover.panel }}">Image (PNG, JPG, GIF or WEBP)</label>
+                    <input type="file" class="form-control" id="img-{{ cover.panel }}" name="image"
+                           accept="image/png,image/jpeg,image/gif,image/webp">
+                    {% if cover.asset_id %}
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" name="remove_image" value="1" id="rm-{{ cover.panel }}">
+                        <label class="form-check-label" for="rm-{{ cover.panel }}">Remove current image</label>
+                    </div>
+                    {% endif %}
+                </div>
+                {% if not book.is_completed %}
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save {{ cover.label }}</button>
+                {% endif %}
+            </fieldset>
+        </form>
+    </div>
+</div>

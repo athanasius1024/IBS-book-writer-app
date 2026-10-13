@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field, status_badge %}
+{% block title %}{{ chapter.title }} - {{ book.title }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.dashboard') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item active">{{ chapter.title }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0">{{ chapter.title }} {{ status_badge(book) }}</h1>
+</div>
+
+{% if book.is_completed %}
+<div class="alert alert-info">
+    <i class="bi bi-lock-fill"></i> This book is completed and read-only.
+    Create an editable copy from the <a href="{{ url_for('books.detail', book_id=book.book_id) }}">book page</a> to change it.
+</div>
+{% else %}
+<form method="POST" action="{{ url_for('chapters.chapter_rename', chapter_id=chapter.chapter_id) }}" class="row g-2 mb-4">
+    {{ csrf_field() }}
+    <div class="col">
+        <input type="text" class="form-control" name="title" value="{{ chapter.title }}" maxlength="300" required>
+    </div>
+    <div class="col-auto"><button class="btn btn-outline-primary">Rename chapter</button></div>
+</form>
+{% endif %}
+
+<div id="blocks">
+    {% for block in chapter.blocks %}
+        {% include "chapters/_block.html" %}
+    {% endfor %}
+</div>
+{% if not chapter.blocks %}
+<p class="text-muted fst-italic" id="no-blocks">No content yet.</p>
+{% endif %}
+
+{% if not book.is_completed %}
+<div class="card mt-4">
+    <div class="card-header"><i class="bi bi-plus-circle"></i> Add content (Markdown)</div>
+    <div class="card-body">
+        <form hx-post="{{ url_for('chapters.block_new', chapter_id=chapter.chapter_id) }}"
+              hx-target="#blocks" hx-swap="beforeend" data-reset-on-success>
+            <textarea class="form-control mb-3" name="content_text" rows="6" required
+                      placeholder="Write in Markdown: # headings, **bold**, *italic*, lists, &gt; quotes..."></textarea>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Add</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
