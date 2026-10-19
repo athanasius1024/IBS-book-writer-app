@@ -90,3 +90,54 @@ ALTER TABLE content_block ADD CONSTRAINT ck_content_block_type
 
 CREATE INDEX IF NOT EXISTS ix_content_block_chapter_id ON content_block(chapter_id);
 CREATE INDEX IF NOT EXISTS ix_content_block_asset_id ON content_block(asset_id);
+
+-- Page layout settings, front matter pages, authors and glossary/index terms.
+CREATE TABLE IF NOT EXISTS book_layout (
+    layout_id    SERIAL PRIMARY KEY,
+    book_id      INTEGER NOT NULL UNIQUE REFERENCES book(book_id) ON DELETE CASCADE,
+    settings     JSON,
+    modified_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS book_page (
+    page_id      SERIAL PRIMARY KEY,
+    book_id      INTEGER NOT NULL REFERENCES book(book_id) ON DELETE CASCADE,
+    page_type    VARCHAR(20) NOT NULL,
+    body         TEXT NOT NULL DEFAULT '',          -- markdown
+    attribution  TEXT,
+    style        JSON,                              -- align, valign, italic, size
+    sort_order   INTEGER NOT NULL DEFAULT 0,
+    created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_book_page_type CHECK (page_type IN ('dedication', 'quote'))
+);
+CREATE INDEX IF NOT EXISTS ix_book_page_book_id ON book_page(book_id);
+
+CREATE TABLE IF NOT EXISTS book_author (
+    author_id       SERIAL PRIMARY KEY,
+    book_id         INTEGER NOT NULL REFERENCES book(book_id) ON DELETE CASCADE,
+    name            TEXT NOT NULL,
+    role            TEXT,
+    bio             TEXT,                           -- markdown; belongs to the book
+    photo_asset_id  INTEGER REFERENCES media_asset(asset_id) ON DELETE SET NULL,
+    sort_order      INTEGER NOT NULL DEFAULT 0,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_book_author_book_id ON book_author(book_id);
+
+CREATE TABLE IF NOT EXISTS book_term (
+    term_id       SERIAL PRIMARY KEY,
+    book_id       INTEGER NOT NULL REFERENCES book(book_id) ON DELETE CASCADE,
+    term          TEXT NOT NULL,
+    definition    TEXT,
+    variants      TEXT,                             -- extra spellings, one per line
+    match_plural  BOOLEAN NOT NULL DEFAULT TRUE,
+    match_case    BOOLEAN NOT NULL DEFAULT FALSE,
+    in_index      BOOLEAN NOT NULL DEFAULT TRUE,
+    in_glossary   BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    modified_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS ix_book_term_book_id ON book_term(book_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_book_term_name ON book_term(book_id, lower(term));

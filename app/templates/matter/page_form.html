@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}{{ 'Add' if is_new else 'Edit' }} {{ type_label }} Page - IBS Book Writer{% endblock %}
+
+{% block content %}
+{% set f = request.form %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item active">{{ 'Add' if is_new else 'Edit' }} {{ type_label }}</li>
+    </ol>
+</nav>
+
+<h1 class="mb-1"><i class="bi bi-{{ 'heart' if page.page_type == 'dedication' else 'quote' }}"></i>
+    {{ 'Add' if is_new else 'Edit' }} {{ type_label }} Page</h1>
+<p class="text-muted">
+    {% if page.page_type == 'dedication' %}
+    A short dedication printed on its own page near the front of the book.
+    {% else %}
+    A quotation (epigraph) printed on its own page, such as a verse or a line from another book. Add the source as the attribution.
+    {% endif %}
+</p>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <form method="POST" id="page-form">
+            {{ csrf_field() }}
+            <input type="hidden" name="page_type" value="{{ page.page_type }}">
+            <div class="mb-3">
+                <label for="pg-body" class="form-label">Text <span class="text-danger">*</span></label>
+                <textarea class="form-control" id="pg-body" name="body" rows="8" required maxlength="5000">{{ f.get('body', page.body or '') }}</textarea>
+                <div class="form-text">Each new line stays a new line on the page. Leave a blank line between stanzas or paragraphs. Markdown works (*italic*, **bold**).</div>
+            </div>
+            {% if page.page_type == 'quote' %}
+            <div class="mb-3">
+                <label for="pg-attr" class="form-label">Attribution / source</label>
+                <input type="text" class="form-control" id="pg-attr" name="attribution" maxlength="300"
+                       value="{{ f.get('attribution', page.attribution or '') }}"
+                       placeholder="e.g. Tao Teh Ching #78, translated by John C. H. Wu">
+            </div>
+            {% endif %}
+            <h5 class="mt-4">How it appears on the page</h5>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label for="pg-align" class="form-label">Alignment</label>
+                    <select class="form-select" id="pg-align" name="align">
+                        {% for value in choices.align %}<option value="{{ value }}" {{ 'selected' if style.align == value }}>{{ value | capitalize }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="pg-valign" class="form-label">Position on the page</label>
+                    <select class="form-select" id="pg-valign" name="valign">
+                        {% for value in choices.valign %}<option value="{{ value }}" {{ 'selected' if style.valign == value }}>{{ value | capitalize }}</option>{% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="pg-size" class="form-label">Text size</label>
+                    <select class="form-select" id="pg-size" name="size">
+                        {% for value in choices.size %}<option value="{{ value }}" {{ 'selected' if style.size == value }}>{{ value | capitalize }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" name="italic" id="pg-italic" {{ 'checked' if style.italic }}>
+                <label class="form-check-label" for="pg-italic">Italic text</label>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ 'Add Page' if is_new else 'Save' }}</button>
+                <a href="{{ url_for('books.detail', book_id=book.book_id) }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-5">
+        <h6 class="text-muted">Preview</h6>
+        <div id="pg-preview" class="page-preview align-{{ style.align }} valign-{{ style.valign }} size-{{ style.size }}{{ ' italic' if style.italic }}">
+            <div class="pv-inner">
+                <div id="pv-body" class="pv-body"></div>
+                {% if page.page_type == 'quote' %}<div id="pv-attr" class="pv-attr"></div>{% endif %}
+            </div>
+        </div>
+        <p class="form-text mt-2">Approximate. Use the Page view on the Layout screen to see the real page.</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+    const preview = document.getElementById('pg-preview');
+    const body = document.getElementById('pg-body');
+    const attr = document.getElementById('pg-attr');
+    function update() {
+        preview.className = 'page-preview align-' + document.getElementById('pg-align').value +
+            ' valign-' + document.getElementById('pg-valign').value +
+            ' size-' + document.getElementById('pg-size').value +
+            (document.getElementById('pg-italic').checked ? ' italic' : '');
+        document.getElementById('pv-body').textContent = body.value;          // textContent: never HTML
+        const target = document.getElementById('pv-attr');
+        if (target) target.textContent = attr && attr.value.trim() ? '\u2014 ' + attr.value.trim() : '';
+    }
+    document.getElementById('page-form').addEventListener('input', update);
+    document.getElementById('page-form').addEventListener('change', update);
+    update();
+})();
+</script>
+{% endblock %}

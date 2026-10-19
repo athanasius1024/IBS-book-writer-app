@@ -11,11 +11,17 @@ A small multi-user web app for writing books. Each user logs in with a username 
 - **Chapters and content blocks**: ordered chapters made of typed blocks - Markdown text, heading (3 sizes), bulleted/numbered list, table (`a | b` rows with optional header row), image (with caption) and icon. Add, edit, reorder and delete blocks; deleting offers **Undo** (button or Ctrl+Z) for 10 seconds.
 - **Media library**: every image you upload (cover panels or Image/Icon blocks) is kept in your private library, where you can reuse it, see where it is used, and delete unused images.
 - **Completed books**: mark a book as completed to make it read-only. To change it later, "Create Editable Copy" shows a warning and makes a new draft (cover, chapters and all); the completed original is never modified.
-- **Preview**: read-only HTML preview of covers and chapters.
+- **Dedication and Quote pages**: each on its own page after the title page, with its own alignment, position, size and italics. A Quote page holds a verse or epigraph with its source (for example a Tao Teh Ching passage); a book can have several.
+- **Authors**: every book has its own authors, each with a bio and photo that are kept *with the book* (so a completed or copied book keeps the bio as written). Shown on an About the Author page.
+- **Glossary and Index**: one Terms screen manages both. Glossary words in the text link to their entry, glossary entries list the pages where the word is used, and the Index lists every term with its page numbers. Whole-word matching (hyphenated compounds don't match), optional plurals, extra spellings, and the longest term wins.
+- **Layout and Page view**: trim size, margins, one or two columns, font, spacing, page numbering and more. The Page view is the real PDF layout, so Index and Glossary page numbers match what you see.
+- **Export**: download the book as **EPUB 3** (validated with EPUBCheck, with contents, glossary links, index and a print page list) or as a **PDF**.
+- **Preview**: read-only HTML preview of covers, front matter, chapters and authors.
 
 ## Quick start
 
-Requirements: Python 3.10+, PostgreSQL 13+ (psql client).
+Requirements: Python 3.10+, PostgreSQL 13+ (psql client), and for PDF/EPUB export the Pango text libraries
+that WeasyPrint uses (on Ubuntu: `sudo apt install libpango-1.0-0 libpangoft2-1.0-0 fontconfig fonts-liberation`).
 
 ```bash
 ./setup_database.sh   # creates db_ibs_bookwriter + tables, writes connection settings to .env
@@ -39,12 +45,22 @@ app/
   chapters.py         chapters and content-block routes
   blocks.py           parsing/validation of every block type
   media.py            image upload, media library, owner-only file serving
+  matter.py           Dedication/Quote pages and authors
+  terms.py            term matching for the Glossary and Index
+  terms_routes.py     the Terms screen
+  layout.py           page layout settings and the PDF/EPUB stylesheets
+  bookdoc.py          the book as one document (feeds PDF and EPUB)
+  render.py           PDF layout and the real page numbers
+  epub.py             EPUB 3 builder
+  exports.py          layout screen, Page view, PDF/EPUB downloads
   settings_routes.py  admin-only database settings
   access.py           ownership checks and the completed-book edit lock
   templates/, static/
-sql/schema.sql        PostgreSQL schema (schema scm_bookwriter)
+sql/schema.sql        PostgreSQL schema (schema scm_bookwriter), safe to re-run to upgrade
 scripts/set_env.py    helper used by the shell scripts to update .env
-tests/                pytest suite (runs on in-memory SQLite)
+scripts/import_terran_book.py   one-off import of the Terran Society manuscript
+scripts/upgrade_terran_book.py  one-off move of that book onto front matter, terms and authors
+tests/                pytest suite (runs on in-memory SQLite; EPUBCheck tests need Java)
 ```
 
 ## Development
@@ -61,5 +77,6 @@ IBS_DEBUG=1 ./start.sh   # auto-reload + debugger (local use only)
 - All state-changing requests are CSRF-protected (including HTMX requests).
 - Every book/cover/chapter/block/media lookup is filtered by the logged-in user; other users' records return 404.
 - Completed books are protected on the server, not just hidden in the UI.
+- The PDF renderer can only read the book owner's own media files; every other URL and local file is refused.
 - Uploaded images are type-checked by extension and file signature, stored outside `static/`, and served only to their owner. User Markdown is sanitised before display.
 - Serve behind HTTPS in production and set `SESSION_COOKIE_SECURE=1`. See [DEPLOYMENT.md](DEPLOYMENT.md).

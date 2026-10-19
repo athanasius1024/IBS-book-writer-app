@@ -1,2 +1,4 @@
 -r requirements.txt
 pytest>=8
+epubcheck>=5.3
+pypdf>=5

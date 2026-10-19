@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}{{ 'Add' if is_new else 'Edit' }} Term - IBS Book Writer{% endblock %}
+
+{% block content %}
+{% set f = request.form %}
+{% set posted = request.method == 'POST' %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('terms.term_list', book_id=book.book_id) }}">Glossary &amp; Index</a></li>
+        <li class="breadcrumb-item active">{{ 'Add' if is_new else 'Edit' }}</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h1 class="mb-3"><i class="bi bi-journal-bookmark"></i> {{ 'Add Term' if is_new else 'Edit Term' }}</h1>
+        <div class="card">
+            <div class="card-body">
+                <form method="POST">
+                    {{ csrf_field() }}
+                    <div class="mb-3">
+                        <label for="t-term" class="form-label">Term <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="t-term" name="term" maxlength="200" required autofocus
+                               value="{{ f.get('term', term.term or '') }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="t-def" class="form-label">Definition</label>
+                        <textarea class="form-control" id="t-def" name="definition" rows="3" maxlength="2000">{{ f.get('definition', term.definition or '') }}</textarea>
+                        <div class="form-text">Needed for the Glossary. Leave empty to list the term in the Index only.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="t-var" class="form-label">Other spellings (one per line)</label>
+                        <textarea class="form-control" id="t-var" name="variants" rows="2" maxlength="4000">{{ f.get('variants', term.variants or '') }}</textarea>
+                        <div class="form-text">Extra wordings that should count as this term, such as an abbreviation or an irregular plural.</div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="in_index" id="t-index" {{ 'checked' if (f.get('in_index') if posted else term.in_index) }}>
+                                <label class="form-check-label" for="t-index">Include in the Index</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="in_glossary" id="t-glossary" {{ 'checked' if (f.get('in_glossary') if posted else term.in_glossary) }}>
+                                <label class="form-check-label" for="t-glossary">Include in the Glossary</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="match_plural" id="t-plural" {{ 'checked' if (f.get('match_plural') if posted else term.match_plural) }}>
+                                <label class="form-check-label" for="t-plural">Also match the plural (Region / Regions)</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="match_case" id="t-case" {{ 'checked' if (f.get('match_case') if posted else term.match_case) }}>
+                                <label class="form-check-label" for="t-case">Match capital letters exactly</label>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="small text-muted">Matching finds whole words only, ignores words joined by a hyphen (so "world-wide" is not "World"), and when several terms overlap the longest wins.</p>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ 'Add Term' if is_new else 'Save' }}</button>
+                        <a href="{{ url_for('terms.term_list', book_id=book.book_id) }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
