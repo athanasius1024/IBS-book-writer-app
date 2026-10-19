@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}{{ 'Add' if is_new else 'Edit' }} Author - IBS Book Writer{% endblock %}
+
+{% block content %}
+{% set f = request.form %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('matter.authors', book_id=book.book_id) }}">Authors</a></li>
+        <li class="breadcrumb-item active">{{ 'Add' if is_new else 'Edit' }}</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <h1 class="mb-3"><i class="bi bi-person-lines-fill"></i> {{ 'Add Author' if is_new else 'Edit Author' }}</h1>
+        {% if prefill %}
+        <div class="alert alert-info">Started from <strong>{{ prefill.name }}</strong> in "{{ prefill.book.title }}". Changes here only affect this book.</div>
+        {% endif %}
+        <div class="card">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ csrf_field() }}
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label for="au-name" class="form-label">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="au-name" name="name" maxlength="300" required autofocus
+                                   value="{{ f.get('name', author.name or '') }}">
+                        </div>
+                        <div class="col-md-5">
+                            <label for="au-role" class="form-label">Role</label>
+                            <input type="text" class="form-control" id="au-role" name="role" maxlength="300"
+                                   value="{{ f.get('role', author.role or '') }}" placeholder="Author, Editor, Illustrator...">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="au-bio" class="form-label">Bio (Markdown)</label>
+                        <textarea class="form-control" id="au-bio" name="bio" rows="8" maxlength="10000">{{ f.get('bio', author.bio or '') }}</textarea>
+                        <div class="form-text">Written as of this book, and kept with it. Update it when you publish a new edition.</div>
+                    </div>
+
+                    <h6>Photo</h6>
+                    {% if author.photo_asset_id %}
+                    <div class="mb-2">
+                        <img src="{{ url_for('media.serve', asset_id=author.photo_asset_id) }}" alt="Current photo" class="author-thumb">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" name="remove_photo" value="1" id="au-remove">
+                            <label class="form-check-label" for="au-remove">Remove the photo</label>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <div class="row g-2 mb-4">
+                        <div class="col-md-6">
+                            <label for="au-photo" class="form-label">Upload a photo</label>
+                            <input type="file" class="form-control" id="au-photo" name="photo" accept="image/png,image/jpeg,image/gif,image/webp">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="au-lib" class="form-label">...or pick from your library</label>
+                            <select class="form-select" id="au-lib" name="photo_asset_id">
+                                <option value="">{{ '- keep current -' if author.photo_asset_id and not (is_new and prefill) else '- none -' }}</option>
+                                {% for asset in library %}
+                                <option value="{{ asset.asset_id }}" {{ 'selected' if is_new and prefill and asset.asset_id == author.photo_asset_id }}>{{ asset.asset_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> {{ 'Add Author' if is_new else 'Save' }}</button>
+                        <a href="{{ url_for('matter.authors', book_id=book.book_id) }}" class="btn btn-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

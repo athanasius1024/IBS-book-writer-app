@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field, status_badge %}
+{% block title %}Layout &amp; Page view - {{ book.title }} - IBS Book Writer{% endblock %}
+
+{% macro number(name, label, value, step='0.5', unit='') %}
+<div class="col-6 col-md-3">
+    <label class="form-label" for="ly-{{ name }}">{{ label }}{{ ' (' ~ unit ~ ')' if unit }}</label>
+    <input type="number" class="form-control" id="ly-{{ name }}" name="{{ name }}" value="{{ '%g' | format(value) }}" step="{{ step }}">
+</div>
+{% endmacro %}
+
+{% macro check(name, label, value) %}
+<div class="col-md-4">
+    <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" name="{{ name }}" id="ly-{{ name }}" {{ 'checked' if value }}>
+        <label class="form-check-label" for="ly-{{ name }}">{{ label }}</label>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item active">Layout &amp; Page view</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0"><i class="bi bi-layout-text-sidebar-reverse"></i> Layout &amp; Page view {{ status_badge(book) }}</h1>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('exports.export_epub', book_id=book.book_id) }}" class="btn btn-outline-primary"><i class="bi bi-book-half"></i> Download EPUB</a>
+        <a href="{{ url_for('exports.export_pdf', book_id=book.book_id) }}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+    </div>
+</div>
+
+{% if book.is_completed %}
+<div class="alert alert-info"><i class="bi bi-lock-fill"></i> This book is completed, so its layout is read-only. You can still view the pages and download the book.</div>
+{% endif %}
+
+<div class="row g-4">
+    <div class="col-xl-5">
+        <form method="POST" id="layout-form">
+            {{ csrf_field() }}
+            <fieldset {{ 'disabled' if book.is_completed }}>
+                <div class="card mb-3">
+                    <div class="card-header">Page size and margins</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="ly-trim">Trim size</label>
+                                <select class="form-select" id="ly-trim" name="trim">
+                                    {% for key, preset in presets.items() %}<option value="{{ key }}" {{ 'selected' if settings.trim == key }}>{{ preset[0] }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            {{ number('width_mm', 'Custom width', settings.width_mm, '0.1', 'mm') }}
+                            {{ number('height_mm', 'Custom height', settings.height_mm, '0.1', 'mm') }}
+                            <div class="col-12"><div class="form-text">The custom size is used only when Trim size is "Custom size".</div></div>
+                            {{ number('margin_top', 'Top', settings.margin_top, '0.5', 'mm') }}
+                            {{ number('margin_bottom', 'Bottom', settings.margin_bottom, '0.5', 'mm') }}
+                            {{ number('margin_inside', 'Inside', settings.margin_inside, '0.5', 'mm') }}
+                            {{ number('margin_outside', 'Outside', settings.margin_outside, '0.5', 'mm') }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">Text</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label" for="ly-font">Font</label>
+                                <select class="form-select" id="ly-font" name="font">
+                                    {% for key, font in fonts.items() %}<option value="{{ key }}" {{ 'selected' if settings.font == key }}>{{ font[0] }}</option>{% endfor %}
+                                </select>
+                            </div>
+                            {{ number('font_size', 'Size', settings.font_size, '0.5', 'pt') }}
+                            {{ number('line_height', 'Line height', settings.line_height, '0.05', '') }}
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-columns">Columns</label>
+                                <select class="form-select" id="ly-columns" name="columns">
+                                    <option value="1" {{ 'selected' if settings.columns == 1 }}>1 column</option>
+                                    <option value="2" {{ 'selected' if settings.columns == 2 }}>2 columns</option>
+                                </select>
+                            </div>
+                            {{ number('column_gap', 'Column gap', settings.column_gap, '0.5', 'mm') }}
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-align">Alignment</label>
+                                <select class="form-select" id="ly-align" name="align">
+                                    <option value="justify" {{ 'selected' if settings.align == 'justify' }}>Justified</option>
+                                    <option value="left" {{ 'selected' if settings.align == 'left' }}>Left</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-para_style">Paragraphs</label>
+                                <select class="form-select" id="ly-para_style" name="para_style">
+                                    <option value="indent" {{ 'selected' if settings.para_style == 'indent' }}>Indented</option>
+                                    <option value="space" {{ 'selected' if settings.para_style == 'space' }}>Spaced apart</option>
+                                </select>
+                            </div>
+                            {{ check('hyphenate', 'Hyphenate words', settings.hyphenate) }}
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-language">Language</label>
+                                <input type="text" class="form-control" id="ly-language" name="language" value="{{ settings.language }}" maxlength="20">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header">Pages and numbering</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-page_numbers">Page numbers</label>
+                                <select class="form-select" id="ly-page_numbers" name="page_numbers">
+                                    <option value="outside" {{ 'selected' if settings.page_numbers == 'outside' }}>Outer corner</option>
+                                    <option value="center" {{ 'selected' if settings.page_numbers == 'center' }}>Centered</option>
+                                    <option value="none" {{ 'selected' if settings.page_numbers == 'none' }}>None</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-front_numbering">Contents pages</label>
+                                <select class="form-select" id="ly-front_numbering" name="front_numbering">
+                                    <option value="roman" {{ 'selected' if settings.front_numbering == 'roman' }}>Roman (i, ii)</option>
+                                    <option value="none" {{ 'selected' if settings.front_numbering == 'none' }}>No numbers</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-running_head">Running head</label>
+                                <select class="form-select" id="ly-running_head" name="running_head">
+                                    <option value="none" {{ 'selected' if settings.running_head == 'none' }}>None</option>
+                                    <option value="chapter" {{ 'selected' if settings.running_head == 'chapter' }}>Chapter title</option>
+                                    <option value="title" {{ 'selected' if settings.running_head == 'title' }}>Book title</option>
+                                </select>
+                            </div>
+                            {{ check('chapter_new_page', 'Chapters start a new page', settings.chapter_new_page) }}
+                            {{ check('include_covers', 'Include cover pages', settings.include_covers) }}
+                            {{ check('include_title_page', 'Include a title page', settings.include_title_page) }}
+                            {{ check('include_contents', 'Include a contents page', settings.include_contents) }}
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-link_mode">Glossary links in the text</label>
+                                <select class="form-select" id="ly-link_mode" name="link_mode">
+                                    <option value="first" {{ 'selected' if settings.link_mode == 'first' }}>First use in each chapter</option>
+                                    <option value="all" {{ 'selected' if settings.link_mode == 'all' }}>Every use</option>
+                                    <option value="none" {{ 'selected' if settings.link_mode == 'none' }}>No links</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mb-3">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save and refresh Page view</button>
+                    <button type="submit" name="reset" value="1" class="btn btn-outline-secondary" formnovalidate
+                            onclick="return confirm('Reset every layout setting to the defaults?');">Reset to defaults</button>
+                </div>
+            </fieldset>
+        </form>
+    </div>
+
+    <div class="col-xl-7">
+        <h5 class="text-muted mb-2">Page view</h5>
+        <p class="small text-muted">This is the real PDF layout, so the page numbers in the Index and Glossary match what you see here. It can take a few seconds to build.</p>
+        <iframe class="page-view" title="Page view" src="{{ url_for('exports.page_view', book_id=book.book_id) }}#toolbar=1&navpanes=0"></iframe>
+    </div>
+</div>
+{% endblock %}

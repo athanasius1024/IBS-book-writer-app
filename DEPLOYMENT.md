@@ -10,7 +10,7 @@ Prompts for the PostgreSQL host, port, database name (default `db_ibs_bookwriter
 
 Unattended: export `DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD` first (empty `DB_PASSWORD` uses `~/.pgpass` or peer auth).
 
-**Upgrading an existing database:** pull the new code, then re-run `./setup_database.sh` (or just `psql -d db_ibs_bookwriter -f sql/schema.sql`) and restart the app. `sql/schema.sql` is idempotent and adds any new columns in place without touching your data (for example the content-block type, data and image columns added with the dashboard and block-type update).
+**Upgrading an existing database:** pull the new code, then re-run `./setup_database.sh` (or just `psql -d db_ibs_bookwriter -f sql/schema.sql`) and restart the app. `sql/schema.sql` is idempotent and adds any new columns in place without touching your data (for example the block type columns, and the layout, front matter page, author and term tables).
 
 Manual alternative:
 
@@ -18,6 +18,16 @@ Manual alternative:
 createdb db_ibs_bookwriter
 psql -d db_ibs_bookwriter -f sql/schema.sql
 ```
+
+## System packages for PDF and EPUB export
+
+The PDF layout engine (WeasyPrint) needs the Pango text libraries and fonts. On Ubuntu/Debian:
+
+```bash
+sudo apt install libpango-1.0-0 libpangoft2-1.0-0 fontconfig fonts-liberation
+```
+
+The default fonts are Liberation Serif/Sans (DejaVu Serif is also offered); these fonts must be installed on the server, otherwise the PDF falls back to a default serif font. Java is only needed to run the EPUBCheck tests in development.
 
 ## 2. Configuration
 
@@ -47,10 +57,10 @@ Production: use a WSGI server behind a TLS-terminating reverse proxy (nginx, Cad
 
 ```bash
 .venv/bin/pip install gunicorn
-cd app && ../.venv/bin/gunicorn --workers 3 --bind 127.0.0.1:8000 "ibsbook:create_app()"
+cd app && ../.venv/bin/gunicorn --workers 3 --timeout 120 --bind 127.0.0.1:8000 "ibsbook:create_app()"
 ```
 
-Set `SESSION_COOKIE_SECURE=1`, and set `ALLOW_REGISTRATION=0` after your accounts are created if the app is reachable by people you don't trust.
+Building a PDF or EPUB takes a few seconds for a normal book (the result is cached until the book changes), hence the longer worker timeout. Set `SESSION_COOKIE_SECURE=1`, and set `ALLOW_REGISTRATION=0` after your accounts are created if the app is reachable by people you don't trust.
 
 ## 4. Backups
 

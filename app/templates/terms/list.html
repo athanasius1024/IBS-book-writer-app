@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field, status_badge %}
+{% block title %}Glossary &amp; Index - {{ book.title }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item active">Glossary &amp; Index</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0"><i class="bi bi-journal-bookmark"></i> Glossary &amp; Index {{ status_badge(book) }}</h1>
+    {% if not book.is_completed %}
+    <a href="{{ url_for('terms.term_new', book_id=book.book_id) }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Term
+    </a>
+    {% endif %}
+</div>
+
+<div class="alert alert-light border">
+    <strong>How it works.</strong> A term with a definition appears in the <strong>Glossary</strong>, and its first use in each
+    chapter becomes a link to that entry. A term marked for the <strong>Index</strong> is listed with the page numbers where it
+    is used (page numbers come from the book's page layout). The "Uses" column counts how often each term appears in your chapters.
+</div>
+
+{% if book.is_completed %}
+<div class="alert alert-info"><i class="bi bi-lock-fill"></i> This book is completed, so its terms are read-only.</div>
+{% endif %}
+
+{% if terms %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr><th>Term</th><th>Definition</th><th class="text-center">Uses</th><th>Appears in</th><th></th></tr>
+        </thead>
+        <tbody>
+        {% for term in terms %}
+            {% set uses = counts.get(term.term_id, 0) %}
+            <tr>
+                <td class="fw-semibold">{{ term.term }}
+                    {% if term.variant_list %}<div class="small text-muted fw-normal">also: {{ term.variant_list | join(', ') }}</div>{% endif %}
+                </td>
+                <td class="small">{{ (term.definition or '') | truncate(110) }}
+                    {% if not term.definition %}<span class="text-muted fst-italic">no definition</span>{% endif %}</td>
+                <td class="text-center">
+                    {% if uses %}<span class="badge bg-primary">{{ uses }}</span>
+                    {% else %}<span class="badge bg-light text-dark border" title="Not found in any chapter">unused</span>{% endif %}
+                </td>
+                <td class="small">
+                    {% if term.in_index %}<span class="badge bg-info text-dark">Index</span>{% endif %}
+                    {% if term.has_entry %}<span class="badge bg-success">Glossary</span>
+                    {% elif term.in_glossary %}<span class="badge bg-light text-dark border" title="Needs a definition to appear in the Glossary">Glossary (needs definition)</span>{% endif %}
+                    {% if term.match_case %}<span class="badge bg-secondary">match case</span>{% endif %}
+                    {% if not term.match_plural %}<span class="badge bg-secondary">no plurals</span>{% endif %}
+                </td>
+                <td class="text-end text-nowrap">
+                    {% if not book.is_completed %}
+                    <a href="{{ url_for('terms.term_edit', term_id=term.term_id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                    <form method="POST" action="{{ url_for('terms.term_delete', term_id=term.term_id) }}" class="d-inline"
+                          onsubmit="return confirm('Delete this term?');">
+                        {{ csrf_field() }}
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                    {% endif %}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="text-muted small">{{ terms | length }} term{{ '' if terms | length == 1 else 's' }}.</p>
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-journal-plus"></i>
+    <p>No terms yet. Add words you want in the Glossary and the Index.</p>
+</div>
+{% endif %}
+{% endblock %}

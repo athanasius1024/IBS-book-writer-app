@@ -6,32 +6,16 @@ WSGI servers:  gunicorn "ibsbook:create_app()"
 import os
 import secrets
 
-import bleach
-import markdown as md
 from flask import Flask, render_template, request
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
-from markupsafe import Markup
 
 import config
+from markup import render_markdown, render_markdown_lines  # noqa: F401  (re-exported for templates and tests)
 from models import COVER_PANELS, User, db
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
-
-_MD_TAGS = list(bleach.sanitizer.ALLOWED_TAGS) + [
-    'p', 'br', 'hr', 'pre', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'table', 'thead', 'tbody', 'tr', 'th', 'td', 'del', 'sup', 'sub',
-]
-_MD_ATTRS = {'a': ['href', 'title'], 'abbr': ['title'], 'acronym': ['title']}
-
-
-def render_markdown(text):
-    """Render user markdown to sanitised HTML (raw HTML/script is stripped)."""
-    html = md.markdown(text or '', extensions=['extra', 'sane_lists'])
-    clean = bleach.clean(html, tags=_MD_TAGS, attributes=_MD_ATTRS,
-                         protocols=['http', 'https', 'mailto'], strip=True)
-    return Markup(clean)
 
 
 @login_manager.user_loader
@@ -69,10 +53,15 @@ def create_app(overrides=None):
     from chapters import bp as chapters_bp
     from media import bp as media_bp
     from settings_routes import bp as settings_bp
-    for blueprint in (auth_bp, books_bp, covers_bp, chapters_bp, media_bp, settings_bp):
+    from matter import bp as matter_bp
+    from terms_routes import bp as terms_bp
+    from exports import bp as exports_bp
+    for blueprint in (auth_bp, books_bp, covers_bp, chapters_bp, media_bp, settings_bp,
+                      matter_bp, terms_bp, exports_bp):
         app.register_blueprint(blueprint)
 
     app.jinja_env.filters['markdown'] = render_markdown
+    app.jinja_env.filters['markdown_lines'] = render_markdown_lines
 
     @app.context_processor
     def inject_globals():

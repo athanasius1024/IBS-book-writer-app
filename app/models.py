@@ -29,6 +29,13 @@ COVER_PANELS = [
 ]
 COVER_PANEL_KEYS = [key for key, _ in COVER_PANELS]
 
+# Front matter page types: (key, label)
+PAGE_TYPES = [
+    ('dedication', 'Dedication'),
+    ('quote', 'Quote'),
+]
+PAGE_TYPE_KEYS = [key for key, _ in PAGE_TYPES]
+
 # Content block types: (key, label)
 BLOCK_TYPES = [
     ('text', 'Text (Markdown)'),
@@ -91,6 +98,13 @@ class Book(db.Model):
     chapters = db.relationship('Chapter', back_populates='book', cascade='all, delete-orphan',
                                order_by='Chapter.sort_order, Chapter.chapter_id')
     derived_from = db.relationship('Book', remote_side=[book_id], foreign_keys=[derived_from_book_id])
+    pages = db.relationship('BookPage', back_populates='book', cascade='all, delete-orphan',
+                            order_by='BookPage.sort_order, BookPage.page_id')
+    authors = db.relationship('BookAuthor', back_populates='book', cascade='all, delete-orphan',
+                              order_by='BookAuthor.sort_order, BookAuthor.author_id')
+    terms = db.relationship('BookTerm', back_populates='book', cascade='all, delete-orphan')
+    layout = db.relationship('BookLayout', back_populates='book', cascade='all, delete-orphan',
+                             uselist=False)
 
     @property
     def is_completed(self):
@@ -155,6 +169,22 @@ class Book(db.Model):
                     content_data=blk.content_data, asset_id=blk.asset_id,
                     sort_order=blk.sort_order))
             copy.chapters.append(new_ch)
+        # Front matter, authors (bios are preserved as written), terms and layout travel with the book.
+        for page in self.pages:
+            copy.pages.append(BookPage(
+                page_type=page.page_type, body=page.body, attribution=page.attribution,
+                style=dict(page.style or {}), sort_order=page.sort_order))
+        for author in self.authors:
+            copy.authors.append(BookAuthor(
+                name=author.name, role=author.role, bio=author.bio,
+                photo_asset_id=author.photo_asset_id, sort_order=author.sort_order))
+        for term in self.terms:
+            copy.terms.append(BookTerm(
+                term=term.term, definition=term.definition, variants=term.variants,
+                match_plural=term.match_plural, match_case=term.match_case,
+                in_index=term.in_index, in_glossary=term.in_glossary))
+        if self.layout is not None:
+            copy.layout = BookLayout(settings=dict(self.layout.settings or {}))
         return copy
 
 
@@ -266,3 +296,89 @@ class MediaAsset(db.Model):
     file_size = db.Column(db.Integer)
     mime_type = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class BookLayout(db.Model):
+    """Page layout settings for a book (validated by layout.py; stored as JSON)."""
+    __tablename__ = 'book_layout'
+
+    layout_id = db.Column(db.Integer, primary_key=True)
+    book_id = db.Column(db.Integer, db.ForeignKey(fk('book.book_id'), ondelete='CASCADE'),
+                        nullable=False, unique=True)
+    settings = db.Column(db.JSON)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    book = db.relationship('Book', back_populates='layout')
+
+
+class BookPage(db.Model):
+    """A front matter page: a Dedication or a Quote (epigraph)."""
+    __tablename__ = 'book_page'
+    __table_args__ = (
+        db.CheckConstraint("page_type IN ('dedication', 'quote')", name='ck_book_page_type'),
+    )
+
+    page_id = db.Column(db.Integer, primary_key=True)
+    book_id = db.Column(db.Integer, db.ForeignKey(fk('book.book_id'), ondelete='CASCADE'),
+                        nullable=False, index=True)
+    page_type = db.Column(db.String(20), nullable=False)
+    body = db.Column(db.Text, nullable=False, default='')           # Markdown
+    attribution = db.Column(db.Text)                                 # e.g. "Tao Teh Ching #78"
+    style = db.Column(db.JSON)                                       # align, valign, italic, size
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    book = db.relationship('Book', back_populates='pages')
+
+    @property
+    def type_label(self):
+        return dict(PAGE_TYPES).get(self.page_type, self.page_type)
+
+
+class BookAuthor(db.Model):
+    """An author of this book. The bio belongs to the book, so it is preserved as written."""
+    __tablename__ = 'book_author'
+
+    author_id = db.Column(db.Integer, primary_key=True)
+    book_id = db.Column(db.Integer, db.ForeignKey(fk('book.book_id'), ondelete='CASCADE'),
+                        nullable=False, index=True)
+    name = db.Column(db.Text, nullable=False)
+    role = db.Column(db.Text)
+    bio = db.Column(db.Text)                                         # Markdown
+    photo_asset_id = db.Column(db.Integer, db.ForeignKey(fk('media_asset.asset_id'), ondelete='SET NULL'))
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    book = db.relationship('Book', back_populates='authors')
+    photo = db.relationship('MediaAsset')
+
+
+class BookTerm(db.Model):
+    """A glossary/index term. With a definition and in_glossary it is a glossary entry."""
+    __tablename__ = 'book_term'
+
+    term_id = db.Column(db.Integer, primary_key=True)
+    book_id = db.Column(db.Integer, db.ForeignKey(fk('book.book_id'), ondelete='CASCADE'),
+                        nullable=False, index=True)
+    term = db.Column(db.Text, nullable=False)
+    definition = db.Column(db.Text)
+    variants = db.Column(db.Text)                                    # extra spellings, one per line
+    match_plural = db.Column(db.Boolean, nullable=False, default=True)
+    match_case = db.Column(db.Boolean, nullable=False, default=False)
+    in_index = db.Column(db.Boolean, nullable=False, default=True)
+    in_glossary = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    book = db.relationship('Book', back_populates='terms')
+
+    @property
+    def variant_list(self):
+        return [v.strip() for v in (self.variants or '').splitlines() if v.strip()]
+
+    @property
+    def has_entry(self):
+        """True if this term appears in the Glossary (has a definition and is switched on)."""
+        return bool(self.in_glossary and (self.definition or '').strip())

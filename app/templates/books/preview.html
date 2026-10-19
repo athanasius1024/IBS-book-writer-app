@@ -36,6 +36,13 @@
         {% endif %}
     </section>
 
+    {% for fp in book.pages %}
+    <section class="preview-page fm-preview">
+        <div class="fm-preview-body">{{ fp.body | markdown_lines }}</div>
+        {% if fp.attribution %}<p class="fm-preview-attr">&mdash; {{ fp.attribution }}</p>{% endif %}
+    </section>
+    {% endfor %}
+
     {% for chapter in book.chapters %}
     <section class="preview-page">
         <h2>{{ loop.index }}. {{ chapter.title }}</h2>
@@ -48,6 +55,20 @@
     {% else %}
     <section class="preview-page"><p class="text-muted fst-italic">This book has no chapters yet.</p></section>
     {% endfor %}
+
+    {% if book.authors %}
+    <section class="preview-page">
+        <h2>{{ 'About the Author' if book.authors | length == 1 else 'About the Authors' }}</h2>
+        {% for author in book.authors %}
+        <div class="d-flex gap-3 mb-3">
+            {% if author.photo_asset_id %}<img src="{{ url_for('media.serve', asset_id=author.photo_asset_id) }}" alt="{{ author.name }}" class="author-thumb">{% endif %}
+            <div><h5 class="mb-0">{{ author.name }}</h5>
+                {% if author.role %}<div class="text-muted fst-italic">{{ author.role }}</div>{% endif %}
+                <div class="content-text">{{ (author.bio or '') | markdown }}</div></div>
+        </div>
+        {% endfor %}
+    </section>
+    {% endif %}
 
     {% if inside_back %}<section class="preview-page">{{ cover_box(inside_back, 'cover-full') }}</section>{% endif %}
     {% if back %}<section class="preview-page">{{ cover_box(back, 'cover-full') }}</section>{% endif %}

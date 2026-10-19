@@ -104,6 +104,112 @@
     {% endif %}
 </div>
 
+{# ---- Front matter, authors, terms, layout and export ---- #}
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-bookmark-heart"></i> Front matter</span>
+                {% if not book.is_completed %}
+                <div class="btn-group btn-group-sm">
+                    {% if not (book.pages | selectattr('page_type', 'equalto', 'dedication') | list) %}
+                    <a href="{{ url_for('matter.page_new', book_id=book.book_id, type='dedication') }}" class="btn btn-outline-primary"><i class="bi bi-plus"></i> Dedication</a>
+                    {% endif %}
+                    <a href="{{ url_for('matter.page_new', book_id=book.book_id, type='quote') }}" class="btn btn-outline-primary"><i class="bi bi-plus"></i> Quote</a>
+                </div>
+                {% endif %}
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for page in book.pages %}
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                    <div class="text-truncate">
+                        <span class="badge bg-secondary">{{ page.type_label }}</span>
+                        <span class="small">{{ page.body | replace('\n', ' ') | truncate(48) }}</span>
+                    </div>
+                    {% if not book.is_completed %}
+                    <div class="d-flex gap-1 flex-shrink-0">
+                        <form method="POST" action="{{ url_for('matter.page_move', page_id=page.page_id) }}">
+                            {{ csrf_field() }}<input type="hidden" name="direction" value="up">
+                            <button class="btn btn-sm btn-outline-secondary" title="Move up" {{ 'disabled' if loop.first }}><i class="bi bi-arrow-up"></i></button>
+                        </form>
+                        <form method="POST" action="{{ url_for('matter.page_move', page_id=page.page_id) }}">
+                            {{ csrf_field() }}<input type="hidden" name="direction" value="down">
+                            <button class="btn btn-sm btn-outline-secondary" title="Move down" {{ 'disabled' if loop.last }}><i class="bi bi-arrow-down"></i></button>
+                        </form>
+                        <a href="{{ url_for('matter.page_edit', page_id=page.page_id) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <form method="POST" action="{{ url_for('matter.page_delete', page_id=page.page_id) }}"
+                              onsubmit="return confirm('Delete this page?');">
+                            {{ csrf_field() }}
+                            <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </li>
+                {% else %}
+                <li class="list-group-item text-muted">No Dedication or Quote pages yet.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-person-lines-fill"></i> Authors</span>
+                <a href="{{ url_for('matter.authors', book_id=book.book_id) }}" class="btn btn-sm btn-outline-primary">
+                    {{ 'View' if book.is_completed else 'Manage' }}
+                </a>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for author in book.authors %}
+                <li class="list-group-item d-flex align-items-center gap-2">
+                    {% if author.photo_asset_id %}
+                    <img src="{{ url_for('media.serve', asset_id=author.photo_asset_id) }}" alt="" class="author-thumb author-thumb-sm">
+                    {% else %}
+                    <div class="author-thumb author-thumb-sm author-thumb-empty"><i class="bi bi-person"></i></div>
+                    {% endif %}
+                    <div><strong>{{ author.name }}</strong>{% if author.role %} <span class="text-muted small">&middot; {{ author.role }}</span>{% endif %}</div>
+                </li>
+                {% else %}
+                <li class="list-group-item text-muted">No authors yet. Add one for an About the Author page.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-journal-bookmark"></i> Glossary &amp; Index</span>
+                <a href="{{ url_for('terms.term_list', book_id=book.book_id) }}" class="btn btn-sm btn-outline-primary">
+                    {{ 'View' if book.is_completed else 'Manage' }}
+                </a>
+            </div>
+            <div class="card-body">
+                {% set entries = book.terms | selectattr('has_entry') | list | length %}
+                <p class="mb-1"><strong>{{ book.terms | length }}</strong> term{{ '' if book.terms | length == 1 else 's' }},
+                    <strong>{{ entries }}</strong> with a glossary definition.</p>
+                <p class="small text-muted mb-0">Glossary words link to their entry in the text, and the Index lists the pages where each term is used.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-box-arrow-up-right"></i> Layout &amp; Export</div>
+            <div class="card-body d-flex flex-column gap-2">
+                <a href="{{ url_for('exports.layout_edit', book_id=book.book_id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-layout-text-sidebar-reverse"></i> Layout &amp; Page view
+                </a>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('exports.export_epub', book_id=book.book_id) }}" class="btn btn-primary flex-fill"><i class="bi bi-book-half"></i> Download EPUB</a>
+                    <a href="{{ url_for('exports.export_pdf', book_id=book.book_id) }}" class="btn btn-outline-primary flex-fill"><i class="bi bi-file-earmark-pdf"></i> Download PDF</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {# ---- Modals ---- #}
 <div class="modal fade" id="completeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
