@@ -79,4 +79,4 @@ IBS_DEBUG=1 ./start.sh   # auto-reload + debugger (local use only)
 - Completed books are protected on the server, not just hidden in the UI.
 - The PDF renderer can only read the book owner's own media files; every other URL and local file is refused.
 - Uploaded images are type-checked by extension and file signature, stored outside `static/`, and served only to their owner. User Markdown is sanitised before display.
-- Serve behind HTTPS in production and set `SESSION_COOKIE_SECURE=1`. See [DEPLOYMENT.md](DEPLOYMENT.md).
+- Serve behind HTTPS in production (gunicorn + systemd + nginx) and set `SESSION_COOKIE_SECURE=1`. [DEPLOYMENT.md](DEPLOYMENT.md) documents the current setup and gives step-by-step production instructions, with ready-made files in `deploy/`.

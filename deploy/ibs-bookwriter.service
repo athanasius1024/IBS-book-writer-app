@@ -1,0 +1,46 @@
+# /etc/systemd/system/ibs-bookwriter.service
+#
+# Assumes: code in /opt/ibs-bookwriter, a virtualenv in /opt/ibs-bookwriter/.venv
+# (with requirements-prod.txt installed), a system user "ibsbook", and a .env in
+# /opt/ibs-bookwriter that sets UPLOAD_DIR=/var/lib/ibs-bookwriter/uploads.
+# See DEPLOYMENT.md, part 2.
+
+[Unit]
+Description=IBS Book Writer (gunicorn)
+After=network-online.target postgresql.service
+Wants=network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=ibsbook
+Group=ibsbook
+WorkingDirectory=/opt/ibs-bookwriter
+# The app reads /opt/ibs-bookwriter/.env itself (python-dotenv).
+ExecStart=/opt/ibs-bookwriter/.venv/bin/gunicorn --config /opt/ibs-bookwriter/deploy/gunicorn.conf.py
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=40
+KillMode=mixed
+
+# /var/lib/ibs-bookwriter (uploads) and /var/cache/ibs-bookwriter are created
+# and owned by the service user automatically.
+StateDirectory=ibs-bookwriter
+StateDirectoryMode=0750
+CacheDirectory=ibs-bookwriter
+Environment=XDG_CACHE_HOME=/var/cache/ibs-bookwriter
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+
+# Sandboxing: read-only system, no home directories, no privilege escalation.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
