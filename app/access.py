@@ -16,6 +16,11 @@ COMPLETED_MESSAGE = ('This book is completed and read-only. '
                      'Create an editable copy to make changes.')
 
 
+def bad_request(message):
+    """Abort with a 400 whose body is a short plain-text message (shown by the HTMX error handler)."""
+    abort(make_response(message, 400))
+
+
 def owned_book_or_404(book_id):
     book = Book.query.filter_by(book_id=book_id, user_id=current_user.user_id).first()
     if book is None:

@@ -31,11 +31,19 @@
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'books.dashboard' %}active{% endif %}"
-                           href="{{ url_for('books.dashboard') }}"><i class="bi bi-collection"></i> My Books</a>
+                           href="{{ url_for('books.dashboard') }}"><i class="bi bi-speedometer2"></i> Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'books.list' %}active{% endif %}"
+                           href="{{ url_for('books.list') }}"><i class="bi bi-collection"></i> My Books</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link {% if request.endpoint == 'books.new' %}active{% endif %}"
                            href="{{ url_for('books.new') }}"><i class="bi bi-plus-circle"></i> New Book</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint and request.endpoint.startswith('media.') %}active{% endif %}"
+                           href="{{ url_for('media.library') }}"><i class="bi bi-images"></i> Media Library</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ms-auto align-items-lg-center">

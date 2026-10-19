@@ -10,6 +10,8 @@ Prompts for the PostgreSQL host, port, database name (default `db_ibs_bookwriter
 
 Unattended: export `DB_HOST DB_PORT DB_NAME DB_USER DB_PASSWORD` first (empty `DB_PASSWORD` uses `~/.pgpass` or peer auth).
 
+**Upgrading an existing database:** pull the new code, then re-run `./setup_database.sh` (or just `psql -d db_ibs_bookwriter -f sql/schema.sql`) and restart the app. `sql/schema.sql` is idempotent and adds any new columns in place without touching your data (for example the content-block type, data and image columns added with the dashboard and block-type update).
+
 Manual alternative:
 
 ```bash

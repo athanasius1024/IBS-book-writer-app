@@ -5,7 +5,7 @@
 {% block content %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('books.dashboard') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
         <li class="breadcrumb-item active">Cover</li>
     </ol>

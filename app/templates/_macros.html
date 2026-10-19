@@ -8,6 +8,51 @@
     {% endif %}
 {% endmacro %}
 
+{# Renders one content block of any type. All user text is auto-escaped; only Markdown is sanitised HTML. #}
+{% macro render_block(block) %}
+{% set d = block.content_data or {} %}
+{% if block.block_type == 'heading' %}
+    {% set level = d.get('level', 2) %}
+    {% if level == 1 %}<h3 class="block-heading">{{ block.content_text }}</h3>
+    {% elif level == 3 %}<h5 class="block-heading">{{ block.content_text }}</h5>
+    {% else %}<h4 class="block-heading">{{ block.content_text }}</h4>{% endif %}
+{% elif block.block_type == 'list' %}
+    {% if d.get('ordered') %}
+    <ol class="block-list">{% for item in block.list_items %}<li>{{ item }}</li>{% endfor %}</ol>
+    {% else %}
+    <ul class="block-list">{% for item in block.list_items %}<li>{{ item }}</li>{% endfor %}</ul>
+    {% endif %}
+{% elif block.block_type == 'table' %}
+    {% set rows = d.get('rows', []) %}
+    {% set has_header = d.get('header') and rows %}
+    <div class="table-responsive">
+        <table class="table table-bordered table-sm block-table">
+            {% if has_header %}
+            <thead class="table-light"><tr>{% for cell in rows[0] %}<th>{{ cell }}</th>{% endfor %}</tr></thead>
+            {% endif %}
+            <tbody>
+                {% for row in (rows[1:] if has_header else rows) %}
+                <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% elif block.block_type in ('image', 'icon') %}
+    {% if block.asset_id %}
+    <figure class="block-figure {{ 'block-icon' if block.block_type == 'icon' else '' }}">
+        <img src="{{ url_for('media.serve', asset_id=block.asset_id) }}"
+             alt="{{ block.content_text or (block.asset.asset_name if block.asset else '') }}"
+             class="{{ 'block-icon-img' if block.block_type == 'icon' else 'img-fluid' }}">
+        {% if block.content_text %}<figcaption class="text-muted small mt-1">{{ block.content_text }}</figcaption>{% endif %}
+    </figure>
+    {% else %}
+    <p class="text-muted fst-italic mb-0">[image no longer available]</p>
+    {% endif %}
+{% else %}
+    <div class="content-text">{{ (block.content_text or '') | markdown }}</div>
+{% endif %}
+{% endmacro %}
+
 {# Renders one cover panel as a coloured box with optional image and markdown text. #}
 {% macro cover_box(cover, extra_class='') %}
     <div class="cover-box {{ extra_class }}"

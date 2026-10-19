@@ -1,58 +1,193 @@
 {% extends "base.html" %}
-{% from "_macros.html" import csrf_field, status_badge %}
-{% block title %}My Books - IBS Book Writer{% endblock %}
+{% from "_macros.html" import status_badge %}
+{% block title %}Dashboard - IBS Book Writer{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1 class="mb-0"><i class="bi bi-collection"></i> My Books</h1>
-    <a href="{{ url_for('books.new') }}" class="btn btn-primary">
-        <i class="bi bi-plus-circle"></i> New Book
-    </a>
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4"><i class="bi bi-speedometer2"></i> Dashboard</h1>
+    </div>
 </div>
 
-{% if not books %}
-<div class="text-center py-5 text-muted">
-    <i class="bi bi-journal-plus display-3"></i>
-    <p class="lead mt-3">You don't have any books yet.</p>
-    <a href="{{ url_for('books.new') }}" class="btn btn-primary">Create your first book</a>
-</div>
-{% else %}
-<div class="row g-3">
-    {% for book in books %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title mb-0">
-                        <a href="{{ url_for('books.detail', book_id=book.book_id) }}" class="text-decoration-none">{{ book.title }}</a>
-                    </h5>
-                    {{ status_badge(book) }}
+<!-- Statistics Cards -->
+<div class="row mb-2">
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('books.list') }}" class="text-decoration-none">
+            <div class="card text-white bg-primary stat-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-collection"></i> Books</h5>
+                    <h2 class="card-text">{{ stats.books }}</h2>
                 </div>
-                {% if book.subtitle %}<p class="card-subtitle text-muted mb-2">{{ book.subtitle }}</p>{% endif %}
-                <p class="small mb-1">
-                    {% if book.author_name %}<i class="bi bi-person"></i> {{ book.author_name }}<br>{% endif %}
-                    <i class="bi bi-list-ol"></i> {{ book.chapters | length }} chapter{{ '' if book.chapters | length == 1 else 's' }}
-                    &middot; v{{ book.version }}
-                </p>
-                <p class="small text-muted mb-0">
-                    Last modified {{ book.modified_at.strftime('%Y-%m-%d %H:%M') if book.modified_at else '' }} UTC
-                    {% if book.derived_from_book_id %}<br><i class="bi bi-files"></i> Copy of an earlier book{% endif %}
-                </p>
             </div>
-            <div class="card-footer bg-transparent d-flex flex-wrap gap-2">
-                <a href="{{ url_for('books.detail', book_id=book.book_id) }}" class="btn btn-sm btn-primary">
-                    <i class="bi bi-{{ 'eye' if book.is_completed else 'pencil' }}"></i> {{ 'Open' if book.is_completed else 'Edit' }}
-                </a>
-                <a href="{{ url_for('covers.editor', book_id=book.book_id) }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-card-image"></i> Cover
-                </a>
-                <a href="{{ url_for('books.preview', book_id=book.book_id) }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-book"></i> Preview
-                </a>
+        </a>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('books.list') }}" class="text-decoration-none">
+            <div class="card text-dark bg-warning stat-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-pencil"></i> Drafts</h5>
+                    <h2 class="card-text">{{ stats.drafts }}</h2>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('books.list') }}" class="text-decoration-none">
+            <div class="card text-white bg-success stat-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-lock-fill"></i> Completed</h5>
+                    <h2 class="card-text">{{ stats.completed }}</h2>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-info stat-card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-list-ol"></i> Chapters</h5>
+                <h2 class="card-text">{{ stats.chapters }}</h2>
             </div>
         </div>
     </div>
-    {% endfor %}
+    <div class="col-md-4 mb-3">
+        <div class="card text-white bg-danger stat-card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-layout-text-window-reverse"></i> Content Blocks</h5>
+                <h2 class="card-text">{{ stats.blocks }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <a href="{{ url_for('media.library') }}" class="text-decoration-none">
+            <div class="card text-white bg-secondary stat-card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-images"></i> Images</h5>
+                    <h2 class="card-text">{{ stats.images }}</h2>
+                    <small>Open Media Library</small>
+                </div>
+            </div>
+        </a>
+    </div>
 </div>
-{% endif %}
+
+<!-- Recent Activity and Latest Book Status -->
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Recently Modified Books</h5>
+            </div>
+            <div class="card-body">
+                {% if recent %}
+                <ul class="list-group list-group-flush">
+                    {% for book in recent %}
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a>
+                            <br>
+                            <small class="text-muted">
+                                {{ book.chapters | length }} chapter{{ '' if book.chapters | length == 1 else 's' }}
+                                &middot; Modified: {{ book.modified_at.strftime('%Y-%m-%d %H:%M') if book.modified_at else '' }}
+                            </small>
+                        </div>
+                        {{ status_badge(book) }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-journal-plus"></i>
+                    <p>No books yet.</p>
+                    <a href="{{ url_for('books.new') }}" class="btn btn-primary">Create your first book</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-file-earmark-text"></i> Book Status</h5>
+            </div>
+            <div class="card-body">
+                {% if latest %}
+                <h5 class="mb-1">{{ latest.title }} {{ status_badge(latest) }}</h5>
+                {% if latest.subtitle %}<p class="text-muted mb-2">{{ latest.subtitle }}</p>{% endif %}
+                <p class="mb-1"><strong>Chapters:</strong> {{ latest.chapters | length }}</p>
+                <p class="mb-1"><strong>Content blocks:</strong> {{ latest.block_count }}</p>
+                <p class="mb-1"><strong>Words:</strong> {{ '{:,}'.format(latest.word_count) }}</p>
+                <p class="mb-3"><strong>Last modified:</strong>
+                    {{ latest.modified_at.strftime('%Y-%m-%d %H:%M') if latest.modified_at else '' }} UTC</p>
+
+                <a href="{{ url_for('books.detail', book_id=latest.book_id) }}" class="btn btn-success w-100 mb-2">
+                    <i class="bi bi-{{ 'eye' if latest.is_completed else 'pencil-square' }}"></i>
+                    {{ 'Open Book' if latest.is_completed else 'Continue Editing' }}
+                </a>
+                <a href="{{ url_for('covers.editor', book_id=latest.book_id) }}" class="btn btn-info w-100 mb-2 text-white">
+                    <i class="bi bi-card-image"></i> {{ 'View' if latest.is_completed else 'Edit' }} Cover
+                </a>
+                <a href="{{ url_for('books.preview', book_id=latest.book_id) }}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-book"></i> Preview
+                </a>
+                {% else %}
+                <p class="text-muted">No book yet. Create one to see its status here.</p>
+                <a href="{{ url_for('books.new') }}" class="btn btn-primary w-100">
+                    <i class="bi bi-plus-circle"></i> New Book
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-lightning"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('books.new') }}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-plus-circle"></i> New Book
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        {% if latest_draft %}
+                        <a href="{{ url_for('books.detail', book_id=latest_draft.book_id) }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-pencil-square"></i> Continue Latest Draft
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('books.list') }}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-collection"></i> My Books
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        <a href="{{ url_for('media.library') }}" class="btn btn-outline-warning w-100">
+                            <i class="bi bi-images"></i> Media Library
+                        </a>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                        {% if current_user.is_admin %}
+                        <a href="{{ url_for('settings.database_settings') }}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-gear"></i> Database Settings
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('books.list') }}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-collection"></i> All Books
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

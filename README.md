@@ -5,9 +5,11 @@ A small multi-user web app for writing books. Each user logs in with a username 
 ## Features
 
 - **Accounts**: username + simple password (minimum 8 characters, stored hashed). The first account created is the administrator.
-- **Multiple books per user**: a "My Books" dashboard; each book belongs to one user and is invisible to everyone else.
+- **Dashboard**: stat cards (books, drafts, completed, chapters, content blocks, images), recently modified books, status of your latest book (chapters, blocks, word count) and quick actions.
+- **Multiple books per user**: a "My Books" page; each book belongs to one user and is invisible to everyone else.
 - **Book cover**: five editable panels per book - front, spine (binding), back, inside front and inside back - each with Markdown text, background/text colors and an optional image. A flat wrap-around layout view shows how the panels fit together.
-- **Chapters**: ordered chapters made of Markdown content blocks (add, edit, reorder, delete).
+- **Chapters and content blocks**: ordered chapters made of typed blocks - Markdown text, heading (3 sizes), bulleted/numbered list, table (`a | b` rows with optional header row), image (with caption) and icon. Add, edit, reorder and delete blocks; deleting offers **Undo** (button or Ctrl+Z) for 10 seconds.
+- **Media library**: every image you upload (cover panels or Image/Icon blocks) is kept in your private library, where you can reuse it, see where it is used, and delete unused images.
 - **Completed books**: mark a book as completed to make it read-only. To change it later, "Create Editable Copy" shows a warning and makes a new draft (cover, chapters and all); the completed original is never modified.
 - **Preview**: read-only HTML preview of covers and chapters.
 
@@ -32,10 +34,11 @@ app/
   config.py           environment-based configuration
   models.py           User, Book, BookCover, Chapter, ContentBlock, MediaAsset
   auth.py             login / register / logout
-  books.py            dashboard, create/edit, complete, copy, delete, preview
+  books.py            dashboard, My Books, create/edit, complete, copy, delete, preview
   covers.py           cover editor
-  chapters.py         chapters and content blocks
-  media.py            image upload + owner-only file serving
+  chapters.py         chapters and content-block routes
+  blocks.py           parsing/validation of every block type
+  media.py            image upload, media library, owner-only file serving
   settings_routes.py  admin-only database settings
   access.py           ownership checks and the completed-book edit lock
   templates/, static/

@@ -1,8 +1,14 @@
-<div class="card mb-3 content-block" id="block-{{ block.block_id }}">
+{% from "chapters/_fields.html" import fields %}
+<div class="card mb-3 content-block block-type-{{ block.block_type }}" id="block-{{ block.block_id }}">
     <form hx-post="{{ url_for('chapters.block_save', block_id=block.block_id) }}"
+          hx-encoding="multipart/form-data"
           hx-target="#block-{{ block.block_id }}" hx-swap="outerHTML">
+        <div class="card-header py-1">
+            <span class="badge bg-secondary">{{ block.type_label }}</span>
+            <span class="text-muted small ms-2">Editing</span>
+        </div>
         <div class="card-body">
-            <textarea class="form-control" name="content_text" rows="8" required>{{ block.content_text }}</textarea>
+            {{ fields(block.block_type, block, assets) }}
         </div>
         <div class="card-footer bg-transparent d-flex gap-2 justify-content-end">
             <button type="button" class="btn btn-sm btn-secondary"

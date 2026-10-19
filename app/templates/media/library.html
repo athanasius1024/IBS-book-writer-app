@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field %}
+{% block title %}Media Library - IBS Book Writer{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h1 class="mb-0"><i class="bi bi-images"></i> Media Library</h1>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-upload"></i> Upload images</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('media.upload') }}" enctype="multipart/form-data" class="row g-2">
+            {{ csrf_field() }}
+            <div class="col-md">
+                <input type="file" class="form-control" name="image" multiple required
+                       accept="image/png,image/jpeg,image/gif,image/webp">
+                <div class="form-text">PNG, JPG, GIF or WEBP, up to 8 MB per request. Use them in cover panels and in Image or Icon blocks.</div>
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-primary"><i class="bi bi-upload"></i> Upload</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if not assets %}
+<div class="empty-state">
+    <i class="bi bi-image"></i>
+    <p>Your library is empty. Upload an image above, or add one while editing a cover or chapter.</p>
+</div>
+{% else %}
+<div class="row g-3">
+    {% for asset in assets %}
+    {% set covers, blocks = usage[asset.asset_id] %}
+    <div class="col-6 col-md-4 col-lg-3">
+        <div class="card h-100 media-card">
+            <img src="{{ url_for('media.serve', asset_id=asset.asset_id) }}" class="media-thumb" alt="{{ asset.asset_name }}">
+            <div class="card-body py-2">
+                <div class="small fw-semibold text-truncate" title="{{ asset.asset_name }}">{{ asset.asset_name }}</div>
+                <div class="small text-muted">
+                    {{ '%.1f'|format((asset.file_size or 0) / 1024) }} KB
+                    &middot; {{ asset.created_at.strftime('%Y-%m-%d') if asset.created_at else '' }}
+                </div>
+                <div class="small mt-1">
+                    {% if covers or blocks %}
+                        <span class="badge bg-info text-dark">
+                            Used: {{ covers }} cover{{ '' if covers == 1 else 's' }}, {{ blocks }} block{{ '' if blocks == 1 else 's' }}
+                        </span>
+                    {% else %}
+                        <span class="badge bg-light text-dark border">Unused</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-footer bg-transparent">
+                <form method="POST" action="{{ url_for('media.delete', asset_id=asset.asset_id) }}"
+                      onsubmit="return confirm('Delete this image?');">
+                    {{ csrf_field() }}
+                    <button class="btn btn-sm btn-outline-danger w-100" {{ 'disabled title="In use"' | safe if (covers or blocks) }}>
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

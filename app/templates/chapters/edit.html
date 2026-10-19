@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% from "_macros.html" import csrf_field, status_badge %}
+{% from "chapters/_fields.html" import fields %}
 {% block title %}{{ chapter.title }} - {{ book.title }} - IBS Book Writer{% endblock %}
 
 {% block content %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('books.dashboard') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
         <li class="breadcrumb-item active">{{ chapter.title }}</li>
     </ol>
@@ -41,12 +42,25 @@
 
 {% if not book.is_completed %}
 <div class="card mt-4">
-    <div class="card-header"><i class="bi bi-plus-circle"></i> Add content (Markdown)</div>
+    <div class="card-header"><i class="bi bi-plus-circle"></i> Add content</div>
     <div class="card-body">
         <form hx-post="{{ url_for('chapters.block_new', chapter_id=chapter.chapter_id) }}"
-              hx-target="#blocks" hx-swap="beforeend" data-reset-on-success>
-            <textarea class="form-control mb-3" name="content_text" rows="6" required
-                      placeholder="Write in Markdown: # headings, **bold**, *italic*, lists, &gt; quotes..."></textarea>
+              hx-encoding="multipart/form-data"
+              hx-target="#blocks" hx-swap="beforeend" data-reset-on-success id="add-block-form">
+            <div class="row mb-3">
+                <label class="col-sm-2 col-form-label" for="block-type-select">Block type</label>
+                <div class="col-sm-4">
+                    <select class="form-select" name="block_type" id="block-type-select">
+                        {% for key, label in block_types %}<option value="{{ key }}">{{ label }}</option>{% endfor %}
+                    </select>
+                </div>
+            </div>
+            {# Only the selected type's fieldset is enabled (disabled fields are not submitted). #}
+            {% for key, label in block_types %}
+            <fieldset class="block-fields" data-type="{{ key }}" {{ 'disabled hidden' if not loop.first }}>
+                {{ fields(key, none, assets) }}
+            </fieldset>
+            {% endfor %}
             <button type="submit" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Add</button>
         </form>
     </div>

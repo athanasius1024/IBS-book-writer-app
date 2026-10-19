@@ -71,9 +71,22 @@ CREATE INDEX IF NOT EXISTS ix_chapter_book_id ON chapter(book_id);
 CREATE TABLE IF NOT EXISTS content_block (
     block_id      SERIAL PRIMARY KEY,
     chapter_id    INTEGER NOT NULL REFERENCES chapter(chapter_id) ON DELETE CASCADE,
-    content_text  TEXT    NOT NULL DEFAULT '',     -- markdown
+    block_type    VARCHAR(20) NOT NULL DEFAULT 'text',
+    content_text  TEXT    NOT NULL DEFAULT '',     -- markdown / list items / table source / caption
+    content_data  JSON,                            -- heading level, list style, parsed table
+    asset_id      INTEGER REFERENCES media_asset(asset_id) ON DELETE SET NULL,  -- image / icon
     sort_order    INTEGER NOT NULL DEFAULT 0,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Upgrade path for databases created before block types existed (no-ops on fresh installs).
+ALTER TABLE content_block ADD COLUMN IF NOT EXISTS block_type   VARCHAR(20) NOT NULL DEFAULT 'text';
+ALTER TABLE content_block ADD COLUMN IF NOT EXISTS content_data JSON;
+ALTER TABLE content_block ADD COLUMN IF NOT EXISTS asset_id     INTEGER REFERENCES media_asset(asset_id) ON DELETE SET NULL;
+ALTER TABLE content_block DROP CONSTRAINT IF EXISTS ck_content_block_type;
+ALTER TABLE content_block ADD CONSTRAINT ck_content_block_type
+    CHECK (block_type IN ('text', 'heading', 'list', 'table', 'image', 'icon'));
+
 CREATE INDEX IF NOT EXISTS ix_content_block_chapter_id ON content_block(chapter_id);
+CREATE INDEX IF NOT EXISTS ix_content_block_asset_id ON content_block(asset_id);

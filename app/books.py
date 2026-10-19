@@ -3,9 +3,10 @@ from datetime import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import func
 
 from access import ensure_editable, owned_book_or_404
-from models import STATUS_COMPLETED, Book, db
+from models import STATUS_COMPLETED, Book, Chapter, ContentBlock, MediaAsset, db
 
 bp = Blueprint('books', __name__)
 
@@ -38,12 +39,40 @@ def _apply_form(book):
     return None
 
 
+def _user_books():
+    return (Book.query.filter_by(user_id=current_user.user_id)
+            .order_by(Book.modified_at.desc(), Book.book_id.desc()).all())
+
+
 @bp.route('/')
 @login_required
 def dashboard():
-    books = (Book.query.filter_by(user_id=current_user.user_id)
-             .order_by(Book.modified_at.desc()).all())
-    return render_template('books/dashboard.html', books=books)
+    """Overview: stat cards, recent books, status of the latest book, quick actions."""
+    uid = current_user.user_id
+    books = _user_books()
+    stats = {
+        'books': len(books),
+        'drafts': sum(1 for b in books if not b.is_completed),
+        'completed': sum(1 for b in books if b.is_completed),
+        'chapters': (db.session.query(func.count(Chapter.chapter_id)).select_from(Chapter)
+                     .join(Book, Chapter.book_id == Book.book_id)
+                     .filter(Book.user_id == uid).scalar()),
+        'blocks': (db.session.query(func.count(ContentBlock.block_id)).select_from(ContentBlock)
+                   .join(Chapter, ContentBlock.chapter_id == Chapter.chapter_id)
+                   .join(Book, Chapter.book_id == Book.book_id)
+                   .filter(Book.user_id == uid).scalar()),
+        'images': MediaAsset.query.filter_by(user_id=uid).count(),
+    }
+    latest = books[0] if books else None
+    latest_draft = next((b for b in books if not b.is_completed), None)
+    return render_template('books/dashboard.html', stats=stats, recent=books[:5],
+                           latest=latest, latest_draft=latest_draft)
+
+
+@bp.route('/books', endpoint='list')
+@login_required
+def book_list():
+    return render_template('books/list.html', books=_user_books())
 
 
 @bp.route('/books/new', methods=['GET', 'POST'])
@@ -127,7 +156,7 @@ def delete(book_id):
     db.session.delete(book)
     db.session.commit()
     flash(f'Book "{title}" deleted.', 'success')
-    return redirect(url_for('books.dashboard'))
+    return redirect(url_for('books.list'))
 
 
 @bp.route('/books/<int:book_id>/preview')

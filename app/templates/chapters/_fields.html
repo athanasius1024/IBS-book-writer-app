@@ -1,0 +1,77 @@
+{# Form controls for one block type. `block` is None when adding. #}
+{% macro fields(kind, block=None, assets=[]) %}
+{% set text = block.content_text if block else '' %}
+{% set d = (block.content_data if block and block.content_data else {}) %}
+
+{% if kind == 'text' %}
+    <div class="mb-3">
+        <label class="form-label">Text (Markdown)</label>
+        <textarea class="form-control" name="content_text" rows="{{ 8 if block else 6 }}" required
+                  placeholder="Write in Markdown: # headings, **bold**, *italic*, lists, &gt; quotes...">{{ text }}</textarea>
+    </div>
+
+{% elif kind == 'heading' %}
+    <div class="row g-2 mb-3">
+        <div class="col-md-8">
+            <label class="form-label">Heading text</label>
+            <input type="text" class="form-control" name="content_text" maxlength="300" required value="{{ text }}">
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Size</label>
+            <select class="form-select" name="heading_level">
+                <option value="1" {{ 'selected' if d.get('level') == 1 }}>Large</option>
+                <option value="2" {{ 'selected' if d.get('level', 2) == 2 }}>Medium</option>
+                <option value="3" {{ 'selected' if d.get('level') == 3 }}>Small</option>
+            </select>
+        </div>
+    </div>
+
+{% elif kind == 'list' %}
+    <div class="mb-3">
+        <label class="form-label">Items (one per line)</label>
+        <textarea class="form-control" name="content_text" rows="5" required>{{ text }}</textarea>
+    </div>
+    <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="list_ordered" value="1" id="lo-{{ block.block_id if block else 'new' }}"
+               {{ 'checked' if d.get('ordered') }}>
+        <label class="form-check-label" for="lo-{{ block.block_id if block else 'new' }}">Numbered list</label>
+    </div>
+
+{% elif kind == 'table' %}
+    <div class="mb-2">
+        <label class="form-label">Rows (cells separated by <code>|</code>, one row per line)</label>
+        <textarea class="form-control font-monospace" name="content_text" rows="5" required
+                  placeholder="Name | Role | Year&#10;Ada | Author | 2024">{{ text }}</textarea>
+    </div>
+    <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" name="table_header" value="1" id="th-{{ block.block_id if block else 'new' }}"
+               {{ 'checked' if (d.get('header') if block else true) }}>
+        <label class="form-check-label" for="th-{{ block.block_id if block else 'new' }}">First row is a header</label>
+    </div>
+
+{% elif kind in ('image', 'icon') %}
+    {% if block and block.asset_id %}
+    <div class="mb-2">
+        <img src="{{ url_for('media.serve', asset_id=block.asset_id) }}" alt="current image" class="block-edit-thumb">
+        <div class="form-text">Current image. Leave the fields below empty to keep it.</div>
+    </div>
+    {% endif %}
+    <div class="row g-2 mb-3">
+        <div class="col-md-6">
+            <label class="form-label">Upload a new image</label>
+            <input type="file" class="form-control" name="image" accept="image/png,image/jpeg,image/gif,image/webp">
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">...or pick from your library</label>
+            <select class="form-select" name="asset_id">
+                <option value="">{{ '- keep current -' if block and block.asset_id else '- choose -' }}</option>
+                {% for a in assets %}<option value="{{ a.asset_id }}">{{ a.asset_name }}</option>{% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">{{ 'Caption (optional)' if kind == 'image' else 'Label (optional)' }}</label>
+        <input type="text" class="form-control" name="content_text" maxlength="500" value="{{ text }}">
+    </div>
+{% endif %}
+{% endmacro %}

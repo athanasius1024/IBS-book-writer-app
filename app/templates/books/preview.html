@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% from "_macros.html" import cover_box, status_badge %}
+{% from "_macros.html" import cover_box, status_badge, render_block %}
 {% block title %}Preview: {{ book.title }} - IBS Book Writer{% endblock %}
 
 {% block content %}
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="{{ url_for('books.dashboard') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
         <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
         <li class="breadcrumb-item active">Preview</li>
     </ol>
@@ -40,7 +40,7 @@
     <section class="preview-page">
         <h2>{{ loop.index }}. {{ chapter.title }}</h2>
         {% for block in chapter.blocks %}
-            <div class="content-text">{{ block.content_text | markdown }}</div>
+            {{ render_block(block) }}
         {% else %}
             <p class="text-muted fst-italic">This chapter has no content yet.</p>
         {% endfor %}

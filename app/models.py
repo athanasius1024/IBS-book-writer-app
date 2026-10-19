@@ -29,6 +29,17 @@ COVER_PANELS = [
 ]
 COVER_PANEL_KEYS = [key for key, _ in COVER_PANELS]
 
+# Content block types: (key, label)
+BLOCK_TYPES = [
+    ('text', 'Text (Markdown)'),
+    ('heading', 'Heading'),
+    ('list', 'List'),
+    ('table', 'Table'),
+    ('image', 'Image'),
+    ('icon', 'Icon'),
+]
+BLOCK_TYPE_KEYS = [key for key, _ in BLOCK_TYPES]
+
 
 class User(UserMixin, db.Model):
     __tablename__ = 'app_user'
@@ -88,6 +99,14 @@ class Book(db.Model):
     def touch(self):
         self.modified_at = datetime.utcnow()
 
+    @property
+    def block_count(self):
+        return sum(len(ch.blocks) for ch in self.chapters)
+
+    @property
+    def word_count(self):
+        return sum(b.word_count for ch in self.chapters for b in ch.blocks)
+
     def cover(self, panel):
         for c in self.covers:
             if c.panel == panel:
@@ -131,7 +150,10 @@ class Book(db.Model):
         for ch in self.chapters:
             new_ch = Chapter(title=ch.title, sort_order=ch.sort_order)
             for blk in ch.blocks:
-                new_ch.blocks.append(ContentBlock(content_text=blk.content_text, sort_order=blk.sort_order))
+                new_ch.blocks.append(ContentBlock(
+                    block_type=blk.block_type, content_text=blk.content_text,
+                    content_data=blk.content_data, asset_id=blk.asset_id,
+                    sort_order=blk.sort_order))
             copy.chapters.append(new_ch)
         return copy
 
@@ -180,18 +202,57 @@ class Chapter(db.Model):
 
 
 class ContentBlock(db.Model):
-    """A markdown text block inside a chapter."""
+    """One piece of chapter content.
+
+    block_type decides how the fields are used:
+      text     content_text = Markdown body
+      heading  content_text = heading;  content_data = {'level': 1|2|3}
+      list     content_text = one item per line;  content_data = {'ordered': bool}
+      table    content_text = source rows ('a | b');  content_data = {'header': bool, 'rows': [[..]]}
+      image    asset_id = picture;  content_text = caption
+      icon     asset_id = small picture;  content_text = label
+    """
     __tablename__ = 'content_block'
+    __table_args__ = (
+        db.CheckConstraint(
+            "block_type IN ('text', 'heading', 'list', 'table', 'image', 'icon')",
+            name='ck_content_block_type'),
+    )
 
     block_id = db.Column(db.Integer, primary_key=True)
     chapter_id = db.Column(db.Integer, db.ForeignKey(fk('chapter.chapter_id'), ondelete='CASCADE'),
                            nullable=False, index=True)
+    block_type = db.Column(db.String(20), nullable=False, default='text')
     content_text = db.Column(db.Text, nullable=False, default='')
+    content_data = db.Column(db.JSON)
+    asset_id = db.Column(db.Integer, db.ForeignKey(fk('media_asset.asset_id'), ondelete='SET NULL'),
+                         index=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     chapter = db.relationship('Chapter', back_populates='blocks')
+    asset = db.relationship('MediaAsset')
+
+    @property
+    def type_label(self):
+        return dict(BLOCK_TYPES).get(self.block_type, self.block_type)
+
+    @property
+    def data(self):
+        return self.content_data or {}
+
+    @property
+    def list_items(self):
+        return [line for line in (self.content_text or '').splitlines() if line.strip()]
+
+    @property
+    def word_count(self):
+        if self.block_type in ('image', 'icon'):
+            return 0
+        if self.block_type == 'table':
+            return sum(len(str(cell).split()) for row in self.data.get('rows', []) for cell in row)
+        return len((self.content_text or '').split())
 
 
 class MediaAsset(db.Model):
