@@ -14,7 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import http.cookiejar
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
 
 import pytest
@@ -29,6 +29,7 @@ import desktop
 import paths
 import pgsetup
 from bookfactory import make_book, make_user
+from conftest import has_mode
 from ibsbook import create_app
 from layout import ALLOWED_FONT_FILES, BUNDLED_FONT_FILES, FONT_SCHEME, font_face_css, pdf_css, DEFAULTS
 from models import Book, BookTerm, User, db
@@ -76,11 +77,12 @@ def test_desktop_mode_uses_sqlite_and_keeps_everything_in_the_data_folder(tmp_pa
     data = tmp_path / 'mydata'
     got = run_config({'IBS_DESKTOP': '1', 'IBS_DATA_DIR': str(data)}, tmp_path)
     assert got['backend'] == 'sqlite' and got['schema'] is None and got['desktop'] is True
-    assert got['uri'] == f'sqlite:///{data}/ibsbook.db'
+    assert Path(got['uri'].removeprefix('sqlite:///')) == data / 'ibsbook.db'        # separators differ on Windows
     assert got['uploads'] == str(data / 'uploads') and got['env_file'] == str(data / '.env')
-    assert data.is_dir() and (data.stat().st_mode & 0o777) == 0o700
+    assert data.is_dir() and has_mode(data, 0o700)
 
 
+@pytest.mark.skipif(sys.platform == 'win32', reason='this is the Linux/XDG rule; Windows has its own test below')
 def test_default_data_folder_on_linux(tmp_path):
     got = run_config({'IBS_DESKTOP': '1'}, tmp_path)
     assert got['data'] == str(tmp_path / 'home' / '.local' / 'share' / 'ibs-book-writer')
@@ -129,7 +131,7 @@ def test_source_and_server_runs_are_unchanged(tmp_path):
 def test_desktop_secret_key_is_made_once_kept_private_and_reused(monkeypatch, tmp_path):
     monkeypatch.setattr(config, 'DATA_DIR', tmp_path)
     first = config.load_or_create_secret_key()
-    assert len(first) == 64 and (tmp_path / 'secret_key').stat().st_mode & 0o777 == 0o600
+    assert len(first) == 64 and has_mode(tmp_path / 'secret_key', 0o600)
     assert config.load_or_create_secret_key() == first
     (tmp_path / 'secret_key').write_text('')
     assert config.load_or_create_secret_key() not in ('', first)                   # an empty file is replaced
@@ -332,7 +334,7 @@ def test_record_instance_writes_pid_and_port(tmp_path):
 
 
 def test_fontconfig_file_lists_only_the_bundled_fonts_and_escapes_paths():
-    text_ = desktop.fontconfig_text(Path('/opt/a&b/fonts'), Path('/home/u/<cache>'))
+    text_ = desktop.fontconfig_text(PurePosixPath('/opt/a&b/fonts'), PurePosixPath('/home/u/<cache>'))
     assert '<dir>/opt/a&amp;b/fonts</dir>' in text_ and '<cachedir>/home/u/&lt;cache&gt;</cachedir>' in text_
     assert text_.count('<dir>') == 1 and text_.startswith('<?xml')
 
@@ -421,7 +423,7 @@ def test_env_writer_updates_keeps_and_protects(tmp_path):
     values = dotenv_values(env, interpolate=False)
     assert values['DB_PASSWORD'] == awkward and values['DB_HOST'] == 'new' and values['OTHER'] == '1'
     assert env.read_text().startswith('# comment kept') and env.read_text().count('DB_HOST=') == 1
-    assert (env.stat().st_mode & 0o777) == 0o600
+    assert has_mode(env, 0o600)
 
 
 def run_setup(tmp_path, answers, password=''):

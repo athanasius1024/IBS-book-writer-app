@@ -6,6 +6,7 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 
+from conftest import has_mode
 from models import db
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -77,5 +78,5 @@ def test_set_env_round_trips_special_characters(tmp_path, monkeypatch):
     assert values['DB_PASSWORD'] == tricky
     assert values['SECRET_KEY'] == 'first'
     assert values['DB_HOST'] == 'db.example'
-    assert (env_file.stat().st_mode & 0o777) == 0o600
+    assert has_mode(env_file, 0o600)
     assert env_file.read_text().count('DB_HOST=') == 1

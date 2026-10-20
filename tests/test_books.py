@@ -2,7 +2,7 @@ import io
 
 import pytest
 
-from conftest import PNG_BYTES, create_book, get_book
+from conftest import PNG_BYTES, create_book, get_book, has_mode
 from models import COVER_PANEL_KEYS, Book, ContentBlock, MediaAsset, db
 
 HX = {'HX-Request': 'true'}
@@ -365,7 +365,7 @@ def test_database_settings_does_not_echo_password(alice, app, tmp_path, monkeypa
     monkeypatch.setattr(config, 'DB_CONFIG_FILE', cfg)
     alice.post('/settings/database', data={'host': 'h', 'port': '5432', 'database': 'd',
                                            'user': 'u', 'password': 's3cret-value'})
-    assert cfg.exists() and (cfg.stat().st_mode & 0o777) == 0o600
+    assert cfg.exists() and has_mode(cfg, 0o600)
     page = alice.get('/settings/database').data.decode()
     assert 's3cret-value' not in page
     # blank password on re-save keeps the stored one

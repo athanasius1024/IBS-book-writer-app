@@ -19,6 +19,11 @@ from models import Book, db  # noqa: E402
 PASSWORD = 'correct-horse-battery'
 
 
+def has_mode(path, mode):
+    """True if `path` has Unix permission bits `mode`. Windows has no such bits, so there it is always true."""
+    return sys.platform == 'win32' or (Path(path).stat().st_mode & 0o777) == mode
+
+
 def make_app(tmp_path, **overrides):
     config = {
         'TESTING': True,

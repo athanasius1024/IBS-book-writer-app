@@ -96,7 +96,7 @@ def test_formats_generated_together_share_the_same_stamp_and_date(alice, app):
     assert len(stamps) == 1
     stamp = stamps.pop()
     assert stamp in zipfile.ZipFile(path_of(app, found['epub'])).read('OEBPS/text/contents.xhtml').decode()
-    assert stamp in path_of(app, found['html']).read_text()
+    assert stamp in path_of(app, found['html']).read_text(encoding='utf-8')
     assert stamp in zipfile.ZipFile(path_of(app, found['odt'])).read('content.xml').decode()
 
 
@@ -106,7 +106,7 @@ def test_the_stamp_shows_the_books_current_version(alice, app):
     generate(alice, book_id, 'html')
     render = rows(book_id)[0]
     assert render.book_version == '3.2' and render.file_name == 'Versioned_v3.2.html'
-    assert 'Version 3.2 \u00b7 Generated' in path_of(app, render).read_text()
+    assert 'Version 3.2 \u00b7 Generated' in path_of(app, render).read_text(encoding='utf-8')
 
 
 def test_a_completed_book_can_still_be_stored_and_stays_unchanged(alice, app):
@@ -145,7 +145,7 @@ def test_replace_builds_a_fresh_copy_in_the_same_slot_and_removes_the_old_file(a
     assert after[0].book_version == '0.2' and after[0].file_name == 'Renamed_v0.2.html'
     assert after[0].generated_at >= old_when and after[0].is_outdated is False
     assert not old_path.exists() and path_of(app, after[0]).is_file()          # the old file is gone, the new one there
-    assert 'Added later' in path_of(app, after[0]).read_text()
+    assert 'Added later' in path_of(app, after[0]).read_text(encoding='utf-8')
 
 
 def test_delete_removes_the_row_and_the_file(alice, app):
@@ -253,7 +253,7 @@ def test_a_script_hidden_in_a_stored_html_file_could_not_run(alice, app):
     generate(alice, book_id, 'html')
     render = rows(book_id)[0]
     path = path_of(app, render)
-    path.write_text(path.read_text().replace('</body>', '<script>steal()</script></body>'))
+    path.write_text(path.read_text(encoding='utf-8').replace('</body>', '<script>steal()</script></body>'), encoding='utf-8')
     plain = alice.get(f'/renders/{render.render_id}/view')
     assert 'script-src' not in plain.headers['Content-Security-Policy']        # nothing is allowed to run
     printing = alice.get(f'/renders/{render.render_id}/view?print=1')
@@ -342,7 +342,7 @@ def test_a_users_stored_pictures_never_reach_someone_elses_book(alice, bob, app)
     chapter_id = get_book(book_id).chapters[0].chapter_id
     bob.post(f'/chapters/{chapter_id}/blocks/new', data={'block_type': 'text', 'content_text': f'![x](image:{theirs.asset_id})'})
     generate(bob, book_id, 'html')
-    assert 'data:image' not in path_of(app, rows(book_id)[0]).read_text()
+    assert 'data:image' not in path_of(app, rows(book_id)[0]).read_text(encoding='utf-8')
 
 
 # ---- the export folder -----------------------------------------------------------------------------------------
