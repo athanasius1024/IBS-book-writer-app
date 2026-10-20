@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Print {{ render.file_name }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('renders.list_renders', book_id=book.book_id) }}">Stored books</a></li>
+        <li class="breadcrumb-item active">Print</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0"><i class="bi bi-printer"></i> Print</h1>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-primary" id="print-again"><i class="bi bi-printer"></i> Print again</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('renders.view', render_id=render.render_id) }}" target="_blank" rel="noopener">
+            <i class="bi bi-box-arrow-up-right"></i> Open in a new tab</a>
+        <a class="btn btn-outline-secondary" href="{{ url_for('renders.download', render_id=render.render_id) }}"><i class="bi bi-download"></i> Download</a>
+    </div>
+</div>
+<p class="text-muted">
+    The print dialog of your browser should open by itself; it lists the printers of this computer. If it does not,
+    click <strong>Print again</strong>, or open the PDF in a new tab and use the viewer's Print button.
+    {{ render.file_name }} &middot; version {{ render.book_version }}.
+</p>
+<iframe id="pdf-frame" src="{{ url_for('renders.view', render_id=render.render_id) }}" title="{{ render.file_name }}"
+        style="width:100%; height:75vh; border:1px solid #dee2e6; border-radius:6px;"></iframe>
+<script>
+    (function () {
+        var frame = document.getElementById('pdf-frame');
+        function printFrame() {
+            try { frame.contentWindow.focus(); frame.contentWindow.print(); }
+            catch (e) { window.open(frame.src, '_blank'); }
+        }
+        frame.addEventListener('load', function () { setTimeout(printFrame, 400); });
+        document.getElementById('print-again').addEventListener('click', printFrame);
+    }());
+</script>
+{% endblock %}

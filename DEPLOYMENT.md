@@ -11,7 +11,7 @@ Ready-to-use files for part 2 are in `deploy/`: `gunicorn.conf.py`, `ibs-bookwri
 
 # Part 1 - The current setup
 
-*Snapshot taken 2026-10-19, release `main` at `c9a58ec` (pull request #1).*
+*Snapshot updated 2026-10-20: the local instance runs the `feature/editable-contents-inline-images` code (editable Contents, pictures with crop and resize in chapter text, chapter epigraphs, stored PDF/EPUB/HTML/ODT books, version and date stamp on the Contents). Before that it ran `main` after pull request #1.*
 
 ## What is running
 
@@ -20,12 +20,12 @@ Everything runs on one Ubuntu machine, as the user `infodine`. "Production" at t
 - **Application**: Flask's built-in development server, started with `./start.sh`. It runs `app/ibsbook.py` from `/home/infodine/z_app/IBS-book-writer-app`, with debug mode off.
 - **Address**: `http://127.0.0.1:5000`, reachable only from this machine (loopback). No TLS, no reverse proxy.
 - **Python**: 3.13.5 in the project's `.venv`. Dependencies come from `requirements.txt`.
-- **Database**: PostgreSQL 16.9 on the same machine, also listening on loopback only. Database `db_ibs_bookwriter`, schema `scm_bookwriter`, user `rock`. It has 10 tables (`app_user`, `book`, `book_cover`, `chapter`, `content_block`, `media_asset`, `book_layout`, `book_page`, `book_author`, `book_term`).
+- **Database**: PostgreSQL 16.9 on the same machine, also listening on loopback only. Database `db_ibs_bookwriter`, schema `scm_bookwriter`, user `rock`. It has 13 tables (`app_user`, `book`, `book_cover`, `chapter`, `content_block`, `media_asset`, `book_layout`, `book_page`, `book_author`, `book_term`, plus `book_toc_entry`, `media_derivative` and `rendered_book` added by the 2026-10-20 upgrade).
 - **Configuration**: `.env` in the project root (git-ignored, mode 600) holds `SECRET_KEY` and the `DB_*` settings. Nothing else is configured.
-- **Data**: two accounts - `Chuyachan` (administrator, owns a small test book) and `APA` (owns book #7, "Terran Society": 11 chapters, 74 glossary/index terms, 63-page PDF). No images have been uploaded yet, so `uploads/` does not exist; it is created on the first upload.
+- **Data**: two accounts - `Chuyachan` (administrator, owns a small test book) and `APA` (owns book #7, "Terran Society": 11 chapters, 74 glossary/index terms, 63-page PDF). No images have been uploaded yet; `uploads/` is created on the first upload (or the first stored book) and will then also hold `derived/` and `renders/`.
 - **Logs**: `/tmp/ibs-app.log` (lost on reboot).
 - **Exports**: `~/exports/Terran_Society.pdf` and `~/exports/Terran_Society.epub` were saved by hand; the app does not store exports.
-- **Backups**: made by hand, in `~/backups/` (`terran-society-20261018-104612/` and `ibs-bookwriter-20261019-035253/`). Nothing is scheduled.
+- **Backups**: made by hand, in `~/backups/` (`terran-society-20261018-104612/`, `ibs-bookwriter-20261019-035253/` and `ibs-bookwriter-20261020-080531-before-contents-images/`, taken just before the 2026-10-20 schema upgrade). Nothing is scheduled.
 
 ## Operating it
 
@@ -53,6 +53,14 @@ git pull --ff-only
 psql -h localhost -U rock -d db_ibs_bookwriter -f sql/schema.sql   # idempotent; adds anything new
 pkill -f ibsbook.py && (nohup ./start.sh > /tmp/ibs-app.log 2>&1 &)
 ```
+
+## What is stored where (and what to back up)
+
+- **PostgreSQL** holds the text of every book, the Contents entries, the record of each stored book and of each cropped picture.
+- **`UPLOAD_DIR`** (by default `uploads/` in the project) holds three kinds of file: your original pictures (`<user id>/`), cropped and downsized copies made from them (`derived/<user id>/`, rebuilt automatically when needed), and your stored books (`renders/<user id>/`: the PDF, EPUB, HTML and ODT copies, up to 10 per format per book).
+- A backup is the database dump **plus** the whole `UPLOAD_DIR`. `deploy/backup.sh` already archives the whole folder. The `derived/` part could be rebuilt but is small; `renders/` can also be regenerated from the book, but only as the book is *now*, so keep it if you want old versions.
+- Deleting a book deletes its stored books from disk. Deleting a picture deletes its cropped copies.
+- Upgrading from a version without these features: take a backup, `psql -d db_ibs_bookwriter -f sql/schema.sql`, restart. The upgrade only adds tables and columns (`book_toc_entry`, `media_derivative`, `rendered_book`, and two epigraph columns on `chapter`).
 
 ## Gaps compared with a production deployment
 
@@ -162,7 +170,8 @@ UPLOAD_DIR=/var/lib/ibs-bookwriter/uploads
 | `BOOKWRITER_SCHEMA` | Leave at the default `scm_bookwriter`. |
 | `SESSION_COOKIE_SECURE` | `1`. Makes the session cookie HTTPS-only. Do not set it until HTTPS works, or logins will appear to loop. |
 | `ALLOW_REGISTRATION` | `1` while you create the first accounts, then `0` to close sign-up. The first account created is the administrator. |
-| `UPLOAD_DIR` | Absolute path outside the code directory. The systemd unit creates `/var/lib/ibs-bookwriter` for it. Back it up. |
+| `UPLOAD_DIR` | Absolute path outside the code directory. The systemd unit creates `/var/lib/ibs-bookwriter` for it. Back it up. It holds your pictures, the cropped copies made from them (`derived/`) and your stored books (`renders/`). |
+| `EXPORT_DIR` | Optional. A folder on the server where *Save to the export folder* copies stored books. Unset means the button is not offered. Under the systemd unit it must also be listed in `ReadWritePaths=`. |
 
 Runtime tuning is by environment variable in the unit or shell, not by editing code: `WEB_CONCURRENCY` (workers, default 3), `GUNICORN_TIMEOUT` (default 180 s), `GUNICORN_BIND` (default `127.0.0.1:8000`).
 
@@ -353,6 +362,7 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log
 ## Scaling and design limits
 
 - **Single host.** Uploaded images are on the local disk, so running the app on more than one server needs shared storage (for example NFS) mounted as `UPLOAD_DIR`. The database can move to its own server by changing `DB_HOST`.
+- **Stored books are made in the request.** *Generate all four* on a large book can take several seconds (the PDF layout, then the other formats from it); with the production unit's 180 s timeout this is not a problem, and all formats of one action share one layout pass. Cropped copies are made the first time a picture is used and then reused.
 - **Export cache is per worker.** The most recently built layouts are cached in memory (4 per worker) and keyed on the book's last-edit time and layout settings, so the result is always current; the first export or Page view of a book after an edit is slow (about 7 s for the Terran book) once per worker.
 - **Memory.** Size `WEB_CONCURRENCY` by RAM: each worker is about 100 MB idle and several hundred MB while building a large book. Gunicorn recycles workers every ~1000 requests to cap growth.
 - **The administrator's "Database settings" page** writes `config/db_config.json` inside the code directory. Under the production unit the code directory is read-only, so that page cannot save. Use `.env` for database settings in production (environment values take precedence over that page anyway).
@@ -367,6 +377,15 @@ sudo tail -f /var/log/nginx/access.log /var/log/nginx/error.log
 - **Database connection errors:** check `DB_*` in `.env`, that PostgreSQL is running (`systemctl status postgresql`), and the password in `.pgpass`/`.env`. Connection settings given as environment variables override `.env`.
 - **PDF text in the wrong font, or pages break differently from the Page view you saw before:** `fonts-liberation` is not installed on this server.
 - **Uploads fail with a permission error:** `/var/lib/ibs-bookwriter/uploads` must be owned by `ibsbook`.
+
+## Reference: optional checking tools (development only)
+
+The tests use these when they are installed and skip them otherwise, so nothing here is needed to run the app:
+
+- **Java** and `epubcheck` (installed with `requirements-dev.txt`) validate generated EPUBs.
+- The **ODF validator** checks generated ODT files. Download `odfvalidator-0.13.0-jar-with-dependencies.jar` from Maven Central (`org/odftoolkit/odfvalidator`) to `~/.cache/ibs-tools/odfvalidator.jar`, or point `ODF_VALIDATOR_JAR` at it.
+- **LibreOffice** (`soffice`) is used to open a generated ODT and convert it to PDF as a real-world check.
+- **Node.js** runs the crop-maths unit tests (`tests/js/images.test.js`); `tests/browser/dialog.test.js` drives the Insert image dialog in a real Chromium (instructions in its header).
 
 ## Reference: development and single-user use
 

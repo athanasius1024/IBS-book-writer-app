@@ -5,12 +5,14 @@ Files are stored outside ``static`` and served only to their owner.
 import uuid
 from pathlib import Path
 
-from flask import (Blueprint, current_app, flash, redirect, render_template, request,
+from flask import (Blueprint, current_app, flash, jsonify, redirect, render_template, request,
                    send_from_directory, url_for)
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from access import owned_asset_or_404
+from imagespec import parse_crop
+from imaging import derive, inline_usage_counts, remove_derivative_files
 from models import BookCover, ContentBlock, MediaAsset, db
 
 bp = Blueprint('media', __name__)
@@ -53,11 +55,14 @@ def save_image(file_storage, user_id):
                       file_size=destination.stat().st_size, mime_type=mime)
 
 
-def asset_usage(asset_id):
-    """How many covers and content blocks reference this asset."""
+def asset_usage(asset_id, inline=None):
+    """How many covers and content blocks reference this asset. Blocks include text blocks that show
+    it inline; pass `inline` (from inline_usage_counts) to avoid scanning the text for every asset."""
     covers = BookCover.query.filter_by(asset_id=asset_id).count()
     blocks = ContentBlock.query.filter_by(asset_id=asset_id).count()
-    return covers, blocks
+    if inline is None:
+        inline = inline_usage_counts(current_user.user_id)
+    return covers, blocks + inline.get(asset_id, 0)
 
 
 @bp.route('/media/<int:asset_id>')
@@ -68,12 +73,59 @@ def serve(asset_id):
                                mimetype=asset.mime_type, max_age=0)
 
 
+@bp.route('/media/<int:asset_id>/crop')
+@login_required
+def serve_crop(asset_id):
+    """The picture cropped to ?c=x,y,w,h (fractions of the original), as shown in chapter text."""
+    asset = owned_asset_or_404(asset_id)
+    derivative = derive(asset, parse_crop(request.args.get('c')))
+    if derivative is None:                      # no usable crop, or the original is small enough
+        return redirect(url_for('media.serve', asset_id=asset.asset_id))
+    return send_from_directory(current_app.config['UPLOAD_DIR'], derivative.file_path,
+                               mimetype=derivative.mime_type, max_age=0)
+
+
+def _asset_json(asset):
+    return {'id': asset.asset_id, 'name': asset.asset_name, 'url': url_for('media.serve', asset_id=asset.asset_id),
+            'size': asset.file_size or 0}
+
+
+@bp.route('/media/library.json')
+@login_required
+def library_json():
+    """The current user's pictures, for the Insert image picker in the chapter editor."""
+    assets = (MediaAsset.query.filter_by(user_id=current_user.user_id)
+              .order_by(MediaAsset.created_at.desc(), MediaAsset.asset_id.desc()).all())
+    return jsonify({'assets': [_asset_json(a) for a in assets]})
+
+
+@bp.route('/media/upload.json', methods=['POST'])
+@login_required
+def upload_json():
+    """Upload pictures from the Insert image picker; answers with the new library entries."""
+    files = [f for f in request.files.getlist('image') if f and f.filename]
+    if not files:
+        return jsonify({'assets': [], 'errors': ['Choose at least one image to upload.']}), 400
+    created, errors = [], []
+    for upload_file in files:
+        try:
+            asset = save_image(upload_file, current_user.user_id)
+        except ValueError as exc:
+            errors.append(f'{upload_file.filename}: {exc}')
+            continue
+        db.session.add(asset)
+        created.append(asset)
+    db.session.commit()
+    return jsonify({'assets': [_asset_json(a) for a in created], 'errors': errors}), (200 if created else 400)
+
+
 @bp.route('/media')
 @login_required
 def library():
     assets = (MediaAsset.query.filter_by(user_id=current_user.user_id)
               .order_by(MediaAsset.created_at.desc(), MediaAsset.asset_id.desc()).all())
-    usage = {a.asset_id: asset_usage(a.asset_id) for a in assets}
+    inline = inline_usage_counts(current_user.user_id)
+    usage = {a.asset_id: asset_usage(a.asset_id, inline) for a in assets}
     return render_template('media/library.html', assets=assets, usage=usage)
 
 
@@ -113,6 +165,7 @@ def delete(asset_id):
     path = (root / asset.file_path).resolve()
     if root in path.parents and path.is_file():
         path.unlink()
+    remove_derivative_files(asset)
     name = asset.asset_name
     db.session.delete(asset)
     db.session.commit()

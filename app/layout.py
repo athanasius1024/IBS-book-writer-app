@@ -33,6 +33,8 @@ ENUMS = {
     'front_numbering': ['roman', 'none'],
     'running_head': ['none', 'chapter', 'title'],
     'link_mode': ['first', 'all', 'none'],
+    'epigraph_align': ['left', 'center', 'right'],
+    'epigraph_size': ['small', 'medium', 'large'],
 }
 NUMBERS = {
     'width_mm': (80.0, 300.0), 'height_mm': (100.0, 400.0),
@@ -40,7 +42,8 @@ NUMBERS = {
     'margin_inside': (5.0, 60.0), 'margin_outside': (5.0, 60.0),
     'column_gap': (3.0, 20.0), 'font_size': (7.0, 18.0), 'line_height': (1.0, 2.2),
 }
-BOOLS = ['hyphenate', 'chapter_new_page', 'include_title_page', 'include_contents', 'include_covers']
+BOOLS = ['hyphenate', 'chapter_new_page', 'include_title_page', 'include_contents', 'include_covers',
+         'epigraph_italic']
 LANG_RE = re.compile(r'^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$')
 
 DEFAULTS = {
@@ -52,6 +55,7 @@ DEFAULTS = {
     'page_numbers': 'outside', 'front_numbering': 'roman', 'running_head': 'none',
     'include_title_page': True, 'include_contents': True, 'include_covers': True,
     'link_mode': 'first', 'language': 'en',
+    'epigraph_align': 'right', 'epigraph_size': 'small', 'epigraph_italic': True,
 }
 
 # Dedication / Quote page styling options
@@ -176,6 +180,20 @@ _PAGE_STYLE_CSS = """
 .fm-page.size-large .fm-body { font-size: 1.5em; line-height: 1.35; }
 """
 
+# A chapter epigraph sits under the chapter title; one style (from the layout settings) for every chapter.
+_EPIGRAPH_CSS = """
+blockquote.epigraph { margin: -.3em 0 1.8em; max-width: 78%; break-inside: avoid; text-indent: 0; }
+blockquote.epigraph.ep-right { margin-left: auto; margin-right: 0; text-align: right; }
+blockquote.epigraph.ep-left { margin-left: 0; margin-right: auto; text-align: left; }
+blockquote.epigraph.ep-center { margin-left: auto; margin-right: auto; text-align: center; }
+blockquote.epigraph.ep-italic .epigraph-text { font-style: italic; }
+blockquote.epigraph.ep-small .epigraph-text { font-size: .92em; }
+blockquote.epigraph.ep-medium .epigraph-text { font-size: 1.05em; }
+blockquote.epigraph.ep-large .epigraph-text { font-size: 1.2em; line-height: 1.35; }
+blockquote.epigraph .epigraph-text p { margin: 0 0 .35em; text-indent: 0; text-align: inherit; }
+blockquote.epigraph .epigraph-source { margin: .35em 0 0; font-size: .85em; font-style: normal; text-indent: 0; text-align: inherit; }
+"""
+
 _CONTENT_CSS = """
 .blk-heading { margin: 1.3em 0 .5em; break-after: avoid; text-align: left; text-indent: 0; }
 h2.blk-heading { font-size: 1.35em; } h3.blk-heading { font-size: 1.15em; } h4.blk-heading { font-size: 1em; font-style: italic; }
@@ -187,6 +205,14 @@ h2.blk-heading { font-size: 1.35em; } h3.blk-heading { font-size: 1.15em; } h4.b
 .blk-figure img { max-width: 100%; }
 .blk-figure figcaption { font-size: .85em; font-style: italic; margin-top: .3em; text-indent: 0; }
 .blk-icon img { max-width: 16mm; max-height: 16mm; }
+.blk img.inline-img { max-width: 100%; height: auto; vertical-align: middle; }
+.blk figure.inline-figure { margin: .8em 0; break-inside: avoid; text-indent: 0; text-align: center; }
+.blk figure.inline-figure.img-center { margin-left: auto; margin-right: auto; }
+.blk figure.inline-figure.img-left { text-align: left; margin-left: 0; margin-right: auto; }
+.blk figure.inline-figure.img-right { text-align: right; margin-left: auto; margin-right: 0; }
+.blk figure.inline-figure img { max-width: 100%; height: auto; }
+.blk figure.inline-figure[style] img { width: 100%; }
+.blk figure.inline-figure figcaption { font-size: .85em; font-style: italic; margin-top: .3em; text-indent: 0; text-align: center; }
 .blk blockquote { margin: .8em 1.5em; font-style: italic; }
 .gl { color: inherit; text-decoration: none; border-bottom: .5pt dotted #555; }
 .glossary dt { font-weight: bold; margin-top: .7em; break-after: avoid; }
@@ -277,6 +303,10 @@ section.contents ol {{ list-style: none; margin: 0; padding: 0; }}
 section.contents li {{ margin: 0 0 .45em; }}
 section.contents a {{ display: flex; justify-content: space-between; color: inherit; text-decoration: none; }}
 section.contents .toc-page {{ padding-left: 1em; }}
+section.contents li.toc-l1 {{ margin-left: 1.3em; }}
+section.contents li.toc-l2 {{ margin-left: 2.6em; font-size: .95em; }}
+section.contents li.toc-part {{ font-weight: bold; margin-top: 1em; }}
+section.contents .toc-stamp {{ margin: 2.4em 0 0; font-size: 7.5pt; color: #555; text-align: center; text-indent: 0; }}
 section.chapter, section.backmatter {{ page: body; {'break-before: page;' if settings['chapter_new_page'] else ''} }}
 section.chapter.first {{ break-before: page; }}
 section.backmatter {{ break-before: page; }}
@@ -288,6 +318,7 @@ h1.section-title {{ font-size: 1.6em; margin: 2em 0 1em; text-align: center; tex
 .index-body {{ column-count: 2; column-gap: 8mm; font-size: .9em; }}
 """)
     css.append(_CONTENT_CSS)
+    css.append(_EPIGRAPH_CSS)
     css.append(_PAGE_STYLE_CSS)
     return '\n'.join(css)
 
@@ -301,6 +332,11 @@ p {{ margin: 0; }}
 h1, h2, h3, h4 {{ text-align: left; line-height: 1.2; }}
 h1.chapter-title, h1.section-title {{ text-align: center; margin: 2em 0 1em; font-size: 1.7em; page-break-before: always; }}
 nav.toc ol {{ list-style: none; padding-left: 0; }}
+nav.toc li.toc-l1 {{ margin-left: 1.3em; }} nav.toc li.toc-l2 {{ margin-left: 2.6em; font-size: .95em; }}
+nav.toc li.toc-part {{ font-weight: bold; margin-top: 1em; }}
+nav.toc .toc-page:empty {{ display: none; }}
+nav.toc a {{ text-decoration: none; color: inherit; }}
+.toc-stamp {{ margin-top: 2em; font-size: .75em; color: #555; text-align: center; text-indent: 0; }}
 .cover-box {{ text-align: center; padding: 2em 1em; }}
 .cover-box img {{ max-width: 100%; }}
 .titlepage {{ text-align: center; margin-top: 25%; }}
@@ -319,5 +355,6 @@ nav.toc ol {{ list-style: none; padding-left: 0; }}
                                     '.author-photo { float: left; width: 30%; margin: 0 4% 2% 0; }')
                .replace('.blk-icon img { max-width: 16mm; max-height: 16mm; }',
                         '.blk-icon img { max-width: 4em; max-height: 4em; }'))
+    css.append(_EPIGRAPH_CSS)
     css.append(_PAGE_STYLE_CSS)
     return '\n'.join(css)

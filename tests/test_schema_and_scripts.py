@@ -51,8 +51,9 @@ def test_schema_sql_has_constraints_the_app_relies_on():
     assert 'uq_book_cover_panel UNIQUE (book_id, panel)' in SCHEMA_SQL
     assert "status IN ('draft', 'completed')" in SCHEMA_SQL
     assert "panel IN ('front', 'spine', 'back', 'inside_front', 'inside_back')" in SCHEMA_SQL
-    # user->book/media, book->cover/chapter/layout/page/author/term, chapter->block
-    assert SCHEMA_SQL.count("ON DELETE CASCADE") == 9
+    # user->book/media, book->cover/chapter/layout/page/author/term, chapter->block (9), then
+    # toc entry->book/chapter/block (3), derivative->asset/user (2), rendered book->book/user (2)
+    assert SCHEMA_SQL.count("ON DELETE CASCADE") == 16
 
 
 def test_set_env_round_trips_special_characters(tmp_path, monkeypatch):

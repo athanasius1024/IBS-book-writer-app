@@ -190,3 +190,33 @@ a:hover { text-decoration: underline; }
 
 /* ---- Layout / Page view ---- */
 .page-view { width: 100%; height: 78vh; min-height: 520px; border: 1px solid #adb5bd; border-radius: 4px; background: #e9ecef; }
+
+
+/* ---- Pictures placed inside chapter text, and the Insert image dialog ---- */
+.content-text img.inline-img { max-width: 100%; height: auto; vertical-align: middle; }
+.content-text figure.inline-figure { margin: 1rem auto; text-align: center; }
+.content-text figure.inline-figure.img-left { text-align: left; margin-left: 0; }
+.content-text figure.inline-figure.img-right { text-align: right; margin-right: 0; }
+.content-text figure.inline-figure img { max-width: 100%; height: auto; }
+.content-text figure.inline-figure[style] img { width: 100%; }
+.content-text figure.inline-figure figcaption { font-size: .85rem; font-style: italic; color: #6c757d; text-align: center; }
+
+.img-pick { border: 2px solid transparent; background: #f8f9fa; padding: 4px; border-radius: 6px; width: 100%; }
+.img-pick:hover, .img-pick:focus { border-color: #0d6efd; }
+.img-pick img { width: 100%; height: 110px; object-fit: contain; display: block; }
+.img-pick span { display: block; font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.img-stage-wrap { background: #f1f3f5; text-align: center; padding: .5rem; border-radius: 6px; }
+.img-stage { position: relative; display: inline-block; line-height: 0; touch-action: none; user-select: none; }
+.img-stage img { max-width: 100%; max-height: 60vh; display: block; -webkit-user-drag: none; }
+.crop-overlay { position: absolute; inset: 0; cursor: crosshair; overflow: hidden; }
+.crop-box { position: absolute; border: 2px solid #0d6efd; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .45);
+            cursor: move; box-sizing: border-box; }
+.crop-h { position: absolute; width: 16px; height: 16px; background: #fff; border: 2px solid #0d6efd; border-radius: 50%;
+          box-sizing: border-box; }
+.crop-h[data-h='nw'] { left: -9px; top: -9px; cursor: nwse-resize; }
+.crop-h[data-h='ne'] { right: -9px; top: -9px; cursor: nesw-resize; }
+.crop-h[data-h='sw'] { left: -9px; bottom: -9px; cursor: nesw-resize; }
+.crop-h[data-h='se'] { right: -9px; bottom: -9px; cursor: nwse-resize; }
+.toc-heading-picker { max-height: 14rem; overflow: auto; }
+.epigraph-preview { border-left: 3px solid #adb5bd; padding: .25rem 1rem; margin: 0 0 1.25rem 1rem; font-style: italic; color: #495057; }
+.epigraph-preview footer { font-style: normal; font-size: .85rem; color: #6c757d; }

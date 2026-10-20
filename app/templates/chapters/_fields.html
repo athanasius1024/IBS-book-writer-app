@@ -5,7 +5,13 @@
 
 {% if kind == 'text' %}
     <div class="mb-3">
-        <label class="form-label">Text (Markdown)</label>
+        <div class="d-flex justify-content-between align-items-end mb-1">
+            <label class="form-label mb-0">Text (Markdown)</label>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-insert-image
+                    title="Place a picture in the text, with cropping and resizing">
+                <i class="bi bi-image"></i> Insert image
+            </button>
+        </div>
         <textarea class="form-control" name="content_text" rows="{{ 8 if block else 6 }}" required
                   placeholder="Write in Markdown: # headings, **bold**, *italic*, lists, &gt; quotes...">{{ text }}</textarea>
     </div>

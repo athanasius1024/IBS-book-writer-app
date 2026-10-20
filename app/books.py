@@ -151,8 +151,10 @@ def copy(book_id):
 @bp.route('/books/<int:book_id>/delete', methods=['POST'])
 @login_required
 def delete(book_id):
+    from renders import delete_book_files
     book = owned_book_or_404(book_id)
     title = book.title
+    delete_book_files(book)                 # stored PDF/EPUB/HTML/ODT copies go with the book
     db.session.delete(book)
     db.session.commit()
     flash(f'Book "{title}" deleted.', 'success')

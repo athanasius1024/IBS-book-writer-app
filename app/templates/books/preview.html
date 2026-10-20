@@ -46,6 +46,10 @@
     {% for chapter in book.chapters %}
     <section class="preview-page">
         <h2>{{ loop.index }}. {{ chapter.title }}</h2>
+        {% if chapter.has_epigraph %}
+        <blockquote class="epigraph-preview">{{ chapter.epigraph_text | markdown_lines }}
+            {% if chapter.epigraph_source %}<footer>&mdash; {{ chapter.epigraph_source }}</footer>{% endif %}</blockquote>
+        {% endif %}
         {% for block in chapter.blocks %}
             {{ render_block(block) }}
         {% else %}

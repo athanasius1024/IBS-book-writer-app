@@ -11,6 +11,7 @@ from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 
 import config
+from imaging import render_markdown_with_images
 from markup import render_markdown, render_markdown_lines  # noqa: F401  (re-exported for templates and tests)
 from models import COVER_PANELS, User, db
 
@@ -56,12 +57,15 @@ def create_app(overrides=None):
     from matter import bp as matter_bp
     from terms_routes import bp as terms_bp
     from exports import bp as exports_bp
+    from contents import bp as contents_bp
+    from renders import bp as renders_bp
     for blueprint in (auth_bp, books_bp, covers_bp, chapters_bp, media_bp, settings_bp,
-                      matter_bp, terms_bp, exports_bp):
+                      matter_bp, terms_bp, exports_bp, contents_bp, renders_bp):
         app.register_blueprint(blueprint)
 
     app.jinja_env.filters['markdown'] = render_markdown
     app.jinja_env.filters['markdown_lines'] = render_markdown_lines
+    app.jinja_env.filters['markdown_images'] = render_markdown_with_images
 
     @app.context_processor
     def inject_globals():

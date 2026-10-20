@@ -109,6 +109,32 @@
                 </div>
 
                 <div class="card mb-3">
+                    <div class="card-header">Chapter epigraphs</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-epigraph_align">Placement</label>
+                                <select class="form-select" id="ly-epigraph_align" name="epigraph_align">
+                                    <option value="right" {{ 'selected' if settings.epigraph_align == 'right' }}>Right</option>
+                                    <option value="center" {{ 'selected' if settings.epigraph_align == 'center' }}>Centered</option>
+                                    <option value="left" {{ 'selected' if settings.epigraph_align == 'left' }}>Left</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="ly-epigraph_size">Size</label>
+                                <select class="form-select" id="ly-epigraph_size" name="epigraph_size">
+                                    <option value="small" {{ 'selected' if settings.epigraph_size == 'small' }}>Small</option>
+                                    <option value="medium" {{ 'selected' if settings.epigraph_size == 'medium' }}>Medium</option>
+                                    <option value="large" {{ 'selected' if settings.epigraph_size == 'large' }}>Large</option>
+                                </select>
+                            </div>
+                            {{ check('epigraph_italic', 'Italic', settings.epigraph_italic) }}
+                        </div>
+                        <div class="form-text">One style for the epigraphs of every chapter. Add them on each chapter's page.</div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
                     <div class="card-header">Pages and numbering</div>
                     <div class="card-body">
                         <div class="row g-3">
