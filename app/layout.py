@@ -23,6 +23,31 @@ FONTS = {
     'dejavu': ('DejaVu Serif', '"DejaVu Serif", Georgia, serif'),
 }
 
+# The fonts shipped in app/fonts (see LICENSES.txt there). The PDF loads them through ibs-font:// so a PDF looks and
+# paginates the same on every computer, including ones that have none of these fonts installed.
+FONT_SCHEME = 'ibs-font://'
+BUNDLED_FONT_FILES = {
+    'Liberation Serif': ('LiberationSerif-Regular.ttf', 'LiberationSerif-Bold.ttf',
+                         'LiberationSerif-Italic.ttf', 'LiberationSerif-BoldItalic.ttf'),
+    'Liberation Sans': ('LiberationSans-Regular.ttf', 'LiberationSans-Bold.ttf',
+                        'LiberationSans-Italic.ttf', 'LiberationSans-BoldItalic.ttf'),
+    'DejaVu Serif': ('DejaVuSerif-Regular.ttf', 'DejaVuSerif-Bold.ttf',
+                     'DejaVuSerif-Italic.ttf', 'DejaVuSerif-BoldItalic.ttf'),
+}
+ALLOWED_FONT_FILES = frozenset(name for names in BUNDLED_FONT_FILES.values() for name in names)
+_FONT_STYLES = (('normal', 400), ('normal', 700), ('italic', 400), ('italic', 700))   # in file order above
+
+
+def font_face_css():
+    """@font-face rules for the bundled fonts (regular, bold, italic, bold italic of each family)."""
+    rules = []
+    for family, files in BUNDLED_FONT_FILES.items():
+        for filename, (style, weight) in zip(files, _FONT_STYLES):
+            rules.append(f'@font-face {{ font-family: "{family}"; font-style: {style}; font-weight: {weight}; '
+                         f'src: url("{FONT_SCHEME}{filename}"); }}')
+    return '\n'.join(rules)
+
+
 ENUMS = {
     'trim': list(PRESETS),
     'columns': [1, 2],
@@ -249,6 +274,7 @@ def pdf_css(settings, book_title=''):
                 f'@page {selector_prefix}:right {{ @bottom-right {{ content: {content}; font-size: 9pt; }} }}\n')
 
     css = [
+        font_face_css(),
         f'@page {{ size: {width}mm {height}mm; margin: {top}mm {outside}mm {bottom}mm {inside}mm; }}',
         f'@page :left {{ margin-left: {outside}mm; margin-right: {inside}mm; }}',
         f'@page :right {{ margin-left: {inside}mm; margin-right: {outside}mm; }}',

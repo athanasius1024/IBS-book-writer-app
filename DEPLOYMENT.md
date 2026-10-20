@@ -178,7 +178,7 @@ Runtime tuning is by environment variable in the unit or shell, not by editing c
 Optionally run the tests once on this machine before going live (they use in-memory SQLite and touch no data):
 
 ```bash
-.venv/bin/pip install -r requirements-dev.txt && .venv/bin/python -m pytest -q     # expect 197 passed
+.venv/bin/pip install -r requirements-dev.txt && .venv/bin/python -m pytest -q     # expect no failures (a few optional-tool tests are skipped)
 ```
 
 ## Step 5 - Run it under systemd
@@ -386,6 +386,19 @@ The tests use these when they are installed and skip them otherwise, so nothing 
 - The **ODF validator** checks generated ODT files. Download `odfvalidator-0.13.0-jar-with-dependencies.jar` from Maven Central (`org/odftoolkit/odfvalidator`) to `~/.cache/ibs-tools/odfvalidator.jar`, or point `ODF_VALIDATOR_JAR` at it.
 - **LibreOffice** (`soffice`) is used to open a generated ODT and convert it to PDF as a real-world check.
 - **Node.js** runs the crop-maths unit tests (`tests/js/images.test.js`); `tests/browser/dialog.test.js` drives the Insert image dialog in a real Chromium (instructions in its header).
+
+## Reference: the desktop edition (one person, one computer)
+
+The desktop edition is the same app in a single downloadable program; see the README for how people use it. What matters to whoever supports it:
+
+- **Where things are.** One data folder (`%APPDATA%\IBS Book Writer`, or `~/.local/share/ibs-book-writer`, or `--data-dir`, or the `IBS_DATA_DIR` variable; mode 700 on Linux): `ibsbook.db` (SQLite, in WAL mode, so `-wal` and `-shm` files appear beside it while running), `uploads/` (pictures, cropped copies, stored books), `secret_key` (mode 600, made on first run), `fontconfig/` (a generated font file and cache), `running.json` (which port the running copy uses) and, if PostgreSQL was set up, `.env`.
+- **Backup and restore.** Close the program and copy the folder (while it runs, copy `ibsbook.db` only together with its `-wal` file, or stop it first). Restoring is copying it back. Losing `secret_key` only signs everyone out.
+- **Upgrading.** Replace the program file with the new one. At start-up it creates anything missing and runs numbered database migrations once each (`PRAGMA user_version`; see `app/dbinit.py`), keeping all data. A data folder written by a *newer* program is refused by an older one rather than damaged.
+- **PostgreSQL.** `IBSBookWriter --setup-postgres` asks for host, port, database and user (and password), creates the database if it does not exist, applies `sql/schema.sql` and saves the settings in the data folder's `.env` (mode 600). Setting `DB_HOST`, `DB_NAME` or `DATABASE_URL` in that file or the environment has the same effect, and `IBS_DB=sqlite` forces the built-in database. There is no tool to move data between SQLite and PostgreSQL.
+- **Network.** It binds to loopback only and uses the Waitress server with 8 threads. It is a single-user program: do not put it behind a proxy for other people. Use parts 1 and 2 for that.
+- **Building.** `packaging/ibsbook.spec` is the PyInstaller recipe. WeasyPrint loads Pango, HarfBuzz and fontconfig at run time with `dlopen`, which PyInstaller cannot see, so the recipe collects them itself (on Linux the closure found with `ldconfig` and `ldd`, minus the C library; on Windows the DLLs that `packaging/build_windows.ps1` copies from MSYS2). A Linux build needs a C library at least as old as the oldest computer it should run on, so release builds are made on Ubuntu 22.04 (glibc 2.35). `packaging/smoke_test.py FILE` starts a finished program with a throw-away data folder and checks the whole path: sign-up, a book with every block type, all four stored formats, replace and delete.
+- **Windows caveats.** The `.exe` is unsigned (SmartScreen warns on first run; some antivirus tools flag PyInstaller programs, so publish `SHA256SUMS` and, if it matters, sign the file with a code-signing certificate). A one-file program unpacks itself into a temporary folder every start, which takes a few seconds and may be slowed by antivirus scanning.
+- **Releases.** Push a tag such as `v1.0.0` and the workflow in `packaging/ci/build-desktop.yml` (copy it to `.github/workflows/`; pushing that path needs a token with the `workflow` scope) builds both programs, smoke-tests them, and attaches them and `SHA256SUMS` to a GitHub Release. Change `VERSION` in `app/desktop.py` to match.
 
 ## Reference: development and single-user use
 

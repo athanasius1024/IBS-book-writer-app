@@ -1,0 +1,128 @@
+name: Build desktop edition
+
+# Builds the programs people download:
+#   Linux    ibs-book-writer-linux-x86_64   (one file; built on Ubuntu 22.04 so it runs on that and newer)
+#   Windows  IBSBookWriter.exe              (one file; Pango and its libraries are packed inside)
+# Every build is smoke-tested by starting the finished program and using it. A tag that starts with "v" (for
+# example v1.0.0) also publishes both files, with SHA256SUMS, as a GitHub Release.
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+concurrency:
+  group: build-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      # ---- Linux: the libraries WeasyPrint opens at run time (the build packs them into the program) ----
+      - name: Install Pango and fontconfig (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 fontconfig
+
+      - name: Run the test suite (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install -r requirements-dev.txt
+          .venv/bin/python -m pytest -q -p no:cacheprovider
+
+      - name: Build and smoke-test the program (Linux)
+        if: runner.os == 'Linux'
+        run: ./packaging/build_linux.sh --test
+
+      # ---- Windows: Pango comes from MSYS2 ----
+      - name: Install MSYS2 with Pango (Windows)
+        id: msys
+        if: runner.os == 'Windows'
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: mingw-w64-x86_64-pango mingw-w64-x86_64-ntldd
+
+      # The unit tests are informational on Windows (a few assert Unix file modes). What must pass there is the
+      # smoke test of the finished .exe below.
+      - name: Run the test suite (Windows, informational)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        shell: pwsh
+        env:
+          WEASYPRINT_DLL_DIRECTORIES: ${{ steps.msys.outputs.msys2-location }}\mingw64\bin
+        run: |
+          python -m venv .venv
+          .venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+          .venv\Scripts\python.exe -m pytest -q -p no:cacheprovider
+
+      - name: Build and smoke-test the program (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          MSYS2_ROOT: ${{ steps.msys.outputs.msys2-location }}
+        run: ./packaging/build_windows.ps1 -Test
+
+      - name: Keep the built program
+        uses: actions/upload-artifact@v4
+        with:
+          name: ibs-book-writer-${{ runner.os }}
+          path: |
+            dist/ibs-book-writer-linux-x86_64
+            dist/ibs-book-writer-linux-x86_64.sha256
+            dist/IBSBookWriter.exe
+            dist/IBSBookWriter.exe.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ibs-book-writer-*
+          path: release
+          merge-multiple: true
+
+      - name: Checksums for the release
+        run: |
+          cd release
+          chmod +x ibs-book-writer-linux-x86_64
+          cat *.sha256 > SHA256SUMS
+          rm *.sha256
+          ls -l
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/ibs-book-writer-linux-x86_64
+            release/IBSBookWriter.exe
+            release/SHA256SUMS
+          generate_release_notes: true
