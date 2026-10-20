@@ -52,7 +52,7 @@ For one person on one computer there is nothing to install: a single file that c
 - **Windows warnings:** the `.exe` is not code-signed, so Windows SmartScreen may say "Windows protected your PC" (choose *More info*, then *Run anyway*), and some antivirus programs distrust any program made with PyInstaller. Check the download against `SHA256SUMS`. The first start takes a few seconds while the file unpacks itself.
 - Single user, this computer only: it does not listen on the network. For several people use the server setup in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-**Build it yourself:** `packaging/build_linux.sh --test` (needs Python 3.11+ and the Pango libraries) or, on Windows with MSYS2 installed, `packaging\build_windows.ps1 -Test`. Both leave the program in `dist/` and test it by really using it (`packaging/smoke_test.py`). `packaging/ci/build-desktop.yml` is the GitHub Actions workflow that builds and tests both programs on every push and attaches them to a release when a `v*` tag is pushed; copy it to `.github/workflows/` to turn it on.
+**Build it yourself:** `packaging/build_linux.sh --test` (needs Python 3.11+ and the Pango libraries) or, on Windows with MSYS2 installed, `packaging\build_windows.ps1 -Test`. Both leave the program in `dist/` and test it by really using it (`packaging/smoke_test.py`). `.github/workflows/build-desktop.yml` is the GitHub Actions workflow that builds both programs on Ubuntu 22.04 and Windows on every push, runs the tests and the smoke test against each finished program, keeps the files as build artifacts, and attaches them to a release when a `v*` tag is pushed.
 
 ## Project layout
 
