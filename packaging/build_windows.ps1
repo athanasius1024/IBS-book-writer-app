@@ -58,6 +58,9 @@ if (-not (Test-Path "$venv\Scripts\python.exe")) { python -m venv $venv }
 & "$venv\Scripts\python.exe" -m pip install --quiet -r requirements-desktop.txt
 
 Remove-Item -Recurse -Force build\pyinstaller, dist\IBSBookWriter.exe -ErrorAction SilentlyContinue
+# PyInstaller imports WeasyPrint while it analyses the program, which needs Pango to be loadable right now.
+$env:WEASYPRINT_DLL_DIRECTORIES = $libs
+$env:PATH = "$libs;$env:PATH"
 & "$venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --workpath build\pyinstaller --distpath dist packaging\ibsbook.spec
 if ($LASTEXITCODE -ne 0) { throw 'PyInstaller failed' }
 
@@ -67,5 +70,10 @@ Get-Item dist\IBSBookWriter.exe | Format-List Name, Length
 if ($Test) {
     & "$venv\Scripts\python.exe" -m pip install --quiet pypdf          # only the test uses it, to read the PDF it gets
     & "$venv\Scripts\python.exe" packaging\smoke_test.py dist\IBSBookWriter.exe
-    if ($LASTEXITCODE -ne 0) { throw 'Smoke test failed' }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host '=== Smoke test failed; font diagnostics follow ==='
+        $env:WEASYPRINT_DLL_DIRECTORIES = $libs
+        & "$venv\Scripts\python.exe" packaging\diagnose_fonts.py
+        throw 'Smoke test failed'
+    }
 }

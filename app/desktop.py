@@ -54,6 +54,23 @@ def _xml(text):
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
+def export_variable(name, value):
+    """Set an environment variable for this process and for the native libraries it loads.
+
+    On Windows the MSYS2 libraries (fontconfig ...) are linked against the old msvcrt, which keeps its own copy of
+    the environment made when the process started. A variable set later from Python reaches the operating system
+    but not that copy, so it is set there as well.
+    """
+    os.environ[name] = value
+    if sys.platform == 'win32':
+        import ctypes
+        for runtime in ('msvcrt', 'ucrtbase'):
+            try:
+                getattr(ctypes.cdll, runtime)._putenv(f'{name}={value}'.encode('mbcs'))
+            except (OSError, AttributeError):
+                pass
+
+
 def prepare_environment(data_dir=None, bundled_fontconfig=None):
     """Put the process in desktop mode and point the native libraries at what is bundled.
 
@@ -86,8 +103,8 @@ def prepare_environment(data_dir=None, bundled_fontconfig=None):
         (folder / 'cache').mkdir(parents=True, exist_ok=True)
         conf = folder / 'fonts.conf'
         conf.write_text(fontconfig_text(paths.fonts_dir(), folder / 'cache'), encoding='utf-8')
-        os.environ['FONTCONFIG_FILE'] = str(conf)
-        os.environ['FONTCONFIG_PATH'] = str(folder)
+        export_variable('FONTCONFIG_FILE', str(conf))
+        export_variable('FONTCONFIG_PATH', str(folder))
     return data
 
 
