@@ -43,11 +43,12 @@ Open <http://127.0.0.1:5000> and create your account at `/register`.
 
 For one person on one computer there is nothing to install: a single file that contains the app, Python, the PDF text libraries and the fonts.
 
-- **Windows:** `IBSBookWriter.exe`. **Linux (64-bit):** `ibs-book-writer-linux-x86_64` (`chmod +x` it first).
-- Double-click (or run) it. It starts the app **on this computer only** and opens your web browser at <http://*********:5000>. Create your account on the sign-up page; the first account is the administrator. Close its window (or press Ctrl+C) to stop it. Starting it a second time just opens the copy that is already running.
+- **Windows:** `IBSBookWriter_v1_0.exe`. **Linux (64-bit):** `ibs-book-writer-linux-x86_64_v1_0` (`chmod +x` it first). The file name, the program's window title, `--version`, and the top and bottom of every page all carry the version, `v1_0`; later upgrades are `v1_1`, `v1_2` and so on.
+- Double-click (or run) it. It starts the app **on this computer only** and opens your web browser at <http://127.0.0.1:5000>. Create your account on the sign-up page; the first account is the administrator. Close its window (or press Ctrl+C) to stop it. Starting it a second time just opens the copy that is already running.
 - **Your data is one folder** (shown in the program's window): `%APPDATA%\IBS Book Writer` on Windows, `~/.local/share/ibs-book-writer` on Linux, or any folder you pass with `--data-dir`. It holds the SQLite database (`ibsbook.db`), your pictures and stored books (`uploads/`), and a private secret key. **To back up, close the program and copy that folder. To move to another computer, copy it there.**
 - Options: `--port 5050`, `--no-browser`, `--data-dir FOLDER`, `--version`.
-- **PostgreSQL instead of the built-in database** (optional): run `IBSBookWriter --setup-postgres`, answer a few questions, and it creates the database if needed and remembers the connection in the data folder. Existing data does not move between SQLite and PostgreSQL.
+- **Upgrading** to `v1_1` and later: download the new file and run it. It finds your existing data folder (the folder is not named after a version), upgrades the database in place, and keeps your books. The old file can be deleted.
+- **PostgreSQL instead of the built-in database** (optional): run the program with `--setup-postgres`, answer a few questions, and it creates the database if needed and remembers the connection in the data folder. Existing data does not move between SQLite and PostgreSQL.
 - The PDFs use fonts packed inside the program (Liberation Serif and Sans, DejaVu Serif), so a book looks the same on every computer.
 - **Windows warnings:** the `.exe` is not code-signed, so Windows SmartScreen may say "Windows protected your PC" (choose *More info*, then *Run anyway*), and some antivirus programs distrust any program made with PyInstaller. Check the download against `SHA256SUMS`. The first start takes a few seconds while the file unpacks itself.
 - Single user, this computer only: it does not listen on the network. For several people use the server setup in [DEPLOYMENT.md](DEPLOYMENT.md).

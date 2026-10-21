@@ -1,5 +1,5 @@
 <#
-Build the single-file Windows program:  dist\IBSBookWriter.exe
+Build the single-file Windows program:  dist\IBSBookWriter_v<version>.exe   (version: app\version.py)
 
     powershell -ExecutionPolicy Bypass -File packaging\build_windows.ps1            # build
     powershell -ExecutionPolicy Bypass -File packaging\build_windows.ps1 -Test      # build, then smoke-test it
@@ -57,19 +57,21 @@ if (-not (Test-Path "$venv\Scripts\python.exe")) { python -m venv $venv }
 & "$venv\Scripts\python.exe" -m pip install --quiet --upgrade pip
 & "$venv\Scripts\python.exe" -m pip install --quiet -r requirements-desktop.txt
 
-Remove-Item -Recurse -Force build\pyinstaller, dist\IBSBookWriter.exe -ErrorAction SilentlyContinue
+$exeName = (& "$venv\Scripts\python.exe" -c "import sys; sys.path.insert(0, 'app'); import version; print(version.WINDOWS_FILE)").Trim()
+$exe = "dist\$exeName"
+Remove-Item -Recurse -Force build\pyinstaller, $exe, "$exe.sha256" -ErrorAction SilentlyContinue
 # PyInstaller imports WeasyPrint while it analyses the program, which needs Pango to be loadable right now.
 $env:WEASYPRINT_DLL_DIRECTORIES = $libs
 $env:PATH = "$libs;$env:PATH"
 & "$venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --workpath build\pyinstaller --distpath dist packaging\ibsbook.spec
 if ($LASTEXITCODE -ne 0) { throw 'PyInstaller failed' }
 
-Get-Item dist\IBSBookWriter.exe | Format-List Name, Length
-(Get-FileHash dist\IBSBookWriter.exe -Algorithm SHA256).Hash.ToLower() + '  IBSBookWriter.exe' | Set-Content -Encoding ascii dist\IBSBookWriter.exe.sha256
+Get-Item $exe | Format-List Name, Length
+(Get-FileHash $exe -Algorithm SHA256).Hash.ToLower() + "  $exeName" | Set-Content -Encoding ascii "$exe.sha256"
 
 if ($Test) {
     & "$venv\Scripts\python.exe" -m pip install --quiet pypdf          # only the test uses it, to read the PDF it gets
-    & "$venv\Scripts\python.exe" packaging\smoke_test.py dist\IBSBookWriter.exe
+    & "$venv\Scripts\python.exe" packaging\smoke_test.py $exe
     if ($LASTEXITCODE -ne 0) {
         Write-Host '=== Smoke test failed; font diagnostics follow ==='
         $env:WEASYPRINT_DLL_DIRECTORIES = $libs

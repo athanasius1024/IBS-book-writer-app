@@ -21,7 +21,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('books.dashboard') }}">
-                <i class="bi bi-journal-richtext"></i> IBS Book Writer
+                <i class="bi bi-journal-richtext"></i> IBS Book Writer <small class="text-white-50">v{{ app_version }}</small>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -89,7 +89,7 @@
 
     <footer class="footer mt-5 py-3 bg-light">
         <div class="container text-center text-muted">
-            <small>IBS Book Writer &copy; Infodine Business Systems</small>
+            <small>IBS Book Writer v{{ app_version }} &copy; Infodine Business Systems</small>
         </div>
     </footer>
 

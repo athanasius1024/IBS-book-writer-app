@@ -28,6 +28,7 @@ import dbinit
 import desktop
 import paths
 import pgsetup
+import version
 from bookfactory import make_book, make_user
 from conftest import has_mode
 from ibsbook import create_app
@@ -263,7 +264,33 @@ def test_arguments():
 
 def test_version_flag_prints_and_exits(capsys):
     assert desktop.main(['--version']) == 0
-    assert capsys.readouterr().out.strip() == f'IBS Book Writer {desktop.VERSION}'
+    assert capsys.readouterr().out.strip() == f'IBS Book Writer v{desktop.VERSION}' == version.DISPLAY_NAME
+
+
+def test_the_version_is_one_number_that_names_every_file(capsys):
+    assert re.fullmatch(r'\d+_\d+', version.APP_VERSION)                                  # 1_0, 1_1, 1_2 ...
+    n = version.APP_VERSION
+    assert version.WINDOWS_FILE == f'IBSBookWriter_v{n}.exe'
+    assert version.LINUX_FILE == f'ibs-book-writer-linux-x86_64_v{n}' and version.TAG == f'v{n}'
+    assert version.MACOS_FILE == f'ibs-book-writer-macos_v{n}'
+    assert desktop.VERSION == n
+
+
+def test_pages_show_the_version(client):
+    page = client.get('/login').data.decode()
+    assert f'v{version.APP_VERSION}' in page and page.count(f'v{version.APP_VERSION}') >= 2    # navbar and footer
+    assert desktop.BANNER_MARK in page                                                       # is_ours() still recognises it
+
+
+def test_no_build_file_hard_codes_a_name_or_number(tmp_path):
+    """The scripts must take the file names from version.py, so a release is a one-line change there."""
+    for name in ('build_linux.sh', 'build_windows.ps1', 'ibsbook.spec'):
+        source = (ROOT / 'packaging' / name).read_text()
+        executable_lines = [line for line in source.splitlines() if not line.lstrip().startswith(('#', '<#', 'Output:'))]
+        code = '\n'.join(executable_lines)
+        assert f'_v{version.APP_VERSION}' not in code, name
+        assert 'ibs-book-writer-linux-x86_64' not in code or name == 'build_linux.sh' and 'version.LINUX_FILE' in code, name
+    assert 'version.py' in (ROOT / 'packaging' / 'build_linux.sh').read_text()
 
 
 def test_busy_ports_are_skipped():

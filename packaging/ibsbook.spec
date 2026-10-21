@@ -3,7 +3,7 @@
 
     pyinstaller --noconfirm --clean packaging/ibsbook.spec
 
-Output: dist/ibs-book-writer-linux-x86_64   or   dist/IBSBookWriter.exe
+Output: dist/ibs-book-writer-linux-x86_64_v1_0   or   dist/IBSBookWriter_v1_0.exe   (the number is app/version.py)
 
 WeasyPrint reaches Pango, HarfBuzz and fontconfig through cffi.dlopen(), which PyInstaller's import analysis cannot
 see, so those native libraries are collected here by hand:
@@ -24,6 +24,10 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy
 ROOT = Path(SPECPATH).resolve().parent
 APP = ROOT / 'app'
 WINDOWS = sys.platform == 'win32'
+MACOS = sys.platform == 'darwin'
+
+sys.path.insert(0, str(APP))
+import version  # noqa: E402  app/version.py: the one place the version number (and so the file names) comes from
 
 # ---- native libraries -------------------------------------------------------------------------------------------
 
@@ -114,7 +118,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='IBSBookWriter' if WINDOWS else 'ibs-book-writer-linux-x86_64',
+    name=(version.WINDOWS_FILE[:-len('.exe')] if WINDOWS else version.MACOS_FILE if MACOS else version.LINUX_FILE),
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the single-file Linux program:  dist/ibs-book-writer-linux-x86_64
+# Build the single-file Linux program:  dist/ibs-book-writer-linux-x86_64_v<version>   (version: app/version.py)
 #
 #   packaging/build_linux.sh            build in .venv-desktop (created if missing)
 #   packaging/build_linux.sh --test     ...and then run packaging/smoke_test.py against the result
@@ -17,13 +17,16 @@ fi
 "$VENV/bin/python" -m pip install --quiet --upgrade pip
 "$VENV/bin/python" -m pip install --quiet -r requirements-desktop.txt
 
-rm -rf build/pyinstaller dist/ibs-book-writer-linux-x86_64
+# version.py has no imports, so it can be read before anything else is set up
+NAME=$("$VENV/bin/python" -c "import sys; sys.path.insert(0, 'app'); import version; print(version.LINUX_FILE)")
+OUT=dist/$NAME
+
+rm -rf build/pyinstaller "$OUT" "$OUT.sha256"
 "$VENV/bin/python" -m PyInstaller --noconfirm --clean \
     --workpath build/pyinstaller --distpath dist packaging/ibsbook.spec
 
-OUT=dist/ibs-book-writer-linux-x86_64
 ls -lh "$OUT"
-( cd dist && sha256sum ibs-book-writer-linux-x86_64 > ibs-book-writer-linux-x86_64.sha256 )
+( cd dist && sha256sum "$NAME" > "$NAME.sha256" )
 
 if [ "${1:-}" = "--test" ]; then
     "$VENV/bin/python" -m pip install --quiet pypdf          # only the test uses it, to read the PDF it gets

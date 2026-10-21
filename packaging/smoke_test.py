@@ -1,7 +1,7 @@
 """End-to-end check of a built desktop program (the Linux file or IBSBookWriter.exe).
 
-    python packaging/smoke_test.py dist/ibs-book-writer-linux-x86_64
-    python packaging/smoke_test.py dist\\IBSBookWriter.exe
+    python packaging/smoke_test.py dist/ibs-book-writer-linux-x86_64_v1_0
+    python packaging/smoke_test.py dist\\IBSBookWriter_v1_0.exe
 
 It starts the program on a free port with a throw-away data folder, then uses it the way a person would: registers,
 writes a small book (text, a heading, a list, a table and a picture), generates the PDF, EPUB, HTML and ODT, checks
@@ -37,6 +37,14 @@ def check(condition, label):
     if not condition:
         failures.append(label)
     return condition
+
+
+def expected_display_name():
+    """'IBS Book Writer v1_0', read from app/version.py in this checkout (the single source of the number)."""
+    source = (Path(__file__).resolve().parent.parent / 'app' / 'version.py').read_text()
+    name = re.search(r"^APP_NAME = '([^']+)'", source, re.M).group(1)
+    number = re.search(r"^APP_VERSION = '([^']+)'", source, re.M).group(1)
+    return f'{name} v{number}'
 
 
 def free_port():
@@ -141,8 +149,10 @@ def run(binary):
     log_path = work / 'program.log'
     print(f'Testing {binary} ({binary.stat().st_size / 1e6:.0f} MB), data folder {data}')
 
+    expected = expected_display_name()
     version = subprocess.run([str(binary), '--version'], capture_output=True, text=True, timeout=STARTUP_SECONDS)
-    check(version.returncode == 0 and version.stdout.startswith('IBS Book Writer '), f'--version prints "{version.stdout.strip()}"')
+    check(version.returncode == 0 and version.stdout.strip() == expected, f'--version prints "{version.stdout.strip()}" (expected "{expected}")')
+    check(expected.split(' v')[-1] in binary.name, f'the file name carries the version ({binary.name})')
 
     log = open(log_path, 'wb')
     began = time.time()
@@ -151,6 +161,8 @@ def run(binary):
         up = wait_until_up(base, process)
         if not check(up, f'starts and serves the login page ({time.time() - began:.1f} s)'):
             return
+        login_page, _ = Browser(base).get('/login')
+        check(f'v{expected.split(" v")[-1]}'.encode() in login_page, 'the page shows the program version')
         check((data / 'ibsbook.db').is_file(), 'keeps its SQLite database in the data folder')
         check((data / 'secret_key').is_file(), 'made its own secret key')
 

@@ -14,6 +14,7 @@ import config
 from imaging import render_markdown_with_images
 from markup import render_markdown, render_markdown_lines  # noqa: F401  (re-exported for templates and tests)
 from models import COVER_PANELS, User, db
+from version import APP_VERSION
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
@@ -76,7 +77,8 @@ def create_app(overrides=None):
     @app.context_processor
     def inject_globals():
         return {'COVER_PANELS': COVER_PANELS,
-                'allow_registration': app.config.get('ALLOW_REGISTRATION', True)}
+                'allow_registration': app.config.get('ALLOW_REGISTRATION', True),
+                'app_version': APP_VERSION}
 
     @app.after_request
     def security_headers(response):

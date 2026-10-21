@@ -4,12 +4,14 @@ It starts the app on this computer only (127.0.0.1, never reachable from the net
 browser at it, and keeps running until you close its window or press Ctrl+C. Your books, pictures and stored
 copies live in one folder (see paths.py), by default a SQLite database, so there is nothing to install or set up.
 
-    IBSBookWriter                      start (or open the copy that is already running)
-    IBSBookWriter --no-browser         start without opening the browser
-    IBSBookWriter --port 5050          prefer another port (the next free one is used if it is taken)
-    IBSBookWriter --data-dir D         keep the data in folder D
-    IBSBookWriter --setup-postgres     use a PostgreSQL server instead of the built-in database
-    IBSBookWriter --version
+    PROGRAM                      start (or open the copy that is already running)
+    PROGRAM --no-browser         start without opening the browser
+    PROGRAM --port 5050          prefer another port (the next free one is used if it is taken)
+    PROGRAM --data-dir D         keep the data in folder D
+    PROGRAM --setup-postgres     use a PostgreSQL server instead of the built-in database
+    PROGRAM --version
+
+(PROGRAM is the file you downloaded, for example IBSBookWriter_v1_0.exe. The version lives in version.py.)
 """
 import argparse
 import atexit
@@ -24,7 +26,8 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-VERSION = '1.0.0'
+from version import APP_VERSION as VERSION, DISPLAY_NAME     # VERSION looks like 1_0
+
 HOST = '127.0.0.1'
 DEFAULT_PORT = 5000
 PORT_TRIES = 25
@@ -33,7 +36,7 @@ BANNER_MARK = 'IBS Book Writer'
 
 
 def parse_args(argv=None):
-    parser = argparse.ArgumentParser(prog='IBSBookWriter', description='IBS Book Writer, desktop edition.')
+    parser = argparse.ArgumentParser(prog=Path(sys.argv[0]).name or 'IBSBookWriter', description=f'{DISPLAY_NAME}, desktop edition.')
     parser.add_argument('--port', type=int, default=DEFAULT_PORT, help='port to prefer (default %(default)s)')
     parser.add_argument('--no-browser', action='store_true', help='do not open the web browser')
     parser.add_argument('--data-dir', help='folder for the database, pictures and stored books')
@@ -110,6 +113,19 @@ def prepare_environment(data_dir=None, bundled_fontconfig=None):
 
 # ---- one copy at a time, on a free port ------------------------------------------------------------------------------
 
+def set_window_title(title):
+    """Name the console window (Windows) or terminal tab (most terminals) after the program and its version."""
+    try:
+        if sys.platform == 'win32':
+            import ctypes
+            ctypes.windll.kernel32.SetConsoleTitleW(title)
+        elif sys.stdout.isatty():
+            sys.stdout.write(f'\033]0;{title}\007')
+            sys.stdout.flush()
+    except (OSError, AttributeError, ValueError):
+        pass
+
+
 def port_is_free(port, host=HOST):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
         try:
@@ -174,7 +190,7 @@ def open_browser_when_ready(port, delay_limit=15):
 def main(argv=None):
     args = parse_args(argv)
     if args.version:
-        print(f'{BANNER_MARK} {VERSION}')
+        print(DISPLAY_NAME)
         return 0
     data = prepare_environment(args.data_dir)
 
@@ -206,7 +222,8 @@ def main(argv=None):
     record_instance(data, port)
     if not args.no_browser:
         open_browser_when_ready(port)
-    print(f'{BANNER_MARK} {VERSION} is running at http://{HOST}:{port}/')
+    set_window_title(DISPLAY_NAME)
+    print(f'{DISPLAY_NAME} is running at http://{HOST}:{port}/')
     print(f'Your data is in {data}')
     print('Close this window (or press Ctrl+C) to stop it.')
     try:
