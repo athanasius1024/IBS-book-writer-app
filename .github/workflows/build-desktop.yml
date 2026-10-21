@@ -91,10 +91,8 @@ jobs:
         with:
           name: ibs-book-writer-${{ runner.os }}
           path: |
-            dist/ibs-book-writer-linux-x86_64
-            dist/ibs-book-writer-linux-x86_64.sha256
-            dist/IBSBookWriter.exe
-            dist/IBSBookWriter.exe.sha256
+            dist/ibs-book-writer-linux-x86_64*
+            dist/IBSBookWriter*
           if-no-files-found: error
           retention-days: 30
 
@@ -115,7 +113,7 @@ jobs:
       - name: Checksums for the release
         run: |
           cd release
-          chmod +x ibs-book-writer-linux-x86_64
+          chmod +x ibs-book-writer-linux-x86_64_v*
           cat *.sha256 > SHA256SUMS
           rm *.sha256
           ls -l
@@ -123,7 +121,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: |
-            release/ibs-book-writer-linux-x86_64
-            release/IBSBookWriter.exe
+            release/ibs-book-writer-linux-x86_64*
+            release/IBSBookWriter*
             release/SHA256SUMS
           generate_release_notes: true
