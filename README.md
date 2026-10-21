@@ -39,6 +39,22 @@ Open <http://127.0.0.1:5000> and create your account at `/register`.
 
 **Upgrading an existing installation:** back up, pull the new code, then re-run `psql -d db_ibs_bookwriter -f sql/schema.sql` (it only adds what is missing) and restart. See [DEPLOYMENT.md](DEPLOYMENT.md).
 
+## Desktop edition (Windows and Linux)
+
+For one person on one computer there is nothing to install: a single file that contains the app, Python, the PDF text libraries and the fonts.
+
+- **Windows:** `IBSBookWriter_v1_0.exe`. **Linux (64-bit):** `ibs-book-writer-linux-x86_64_v1_0` (`chmod +x` it first). The file name, the program's window title, `--version`, and the top and bottom of every page all carry the version, `v1_0`; later upgrades are `v1_1`, `v1_2` and so on.
+- Double-click (or run) it. It starts the app **on this computer only** and opens your web browser at <http://127.0.0.1:5000>. Create your account on the sign-up page; the first account is the administrator. Close its window (or press Ctrl+C) to stop it. Starting it a second time just opens the copy that is already running.
+- **Your data is one folder** (shown in the program's window): `%APPDATA%\IBS Book Writer` on Windows, `~/.local/share/ibs-book-writer` on Linux, or any folder you pass with `--data-dir`. It holds the SQLite database (`ibsbook.db`), your pictures and stored books (`uploads/`), and a private secret key. **To back up, close the program and copy that folder. To move to another computer, copy it there.**
+- Options: `--port 5050`, `--no-browser`, `--data-dir FOLDER`, `--version`.
+- **Upgrading** to `v1_1` and later: download the new file and run it. It finds your existing data folder (the folder is not named after a version), upgrades the database in place, and keeps your books. The old file can be deleted.
+- **PostgreSQL instead of the built-in database** (optional): run the program with `--setup-postgres`, answer a few questions, and it creates the database if needed and remembers the connection in the data folder. Existing data does not move between SQLite and PostgreSQL.
+- The PDFs use fonts packed inside the program (Liberation Serif and Sans, DejaVu Serif), so a book looks the same on every computer.
+- **Windows warnings:** the `.exe` is not code-signed, so Windows SmartScreen may say "Windows protected your PC" (choose *More info*, then *Run anyway*), and some antivirus programs distrust any program made with PyInstaller. Check the download against `SHA256SUMS`. The first start takes a few seconds while the file unpacks itself.
+- Single user, this computer only: it does not listen on the network. For several people use the server setup in [DEPLOYMENT.md](DEPLOYMENT.md).
+
+**Build it yourself:** `packaging/build_linux.sh --test` (needs Python 3.11+ and the Pango libraries) or, on Windows with MSYS2 installed, `packaging\build_windows.ps1 -Test`. Both leave the program in `dist/` and test it by really using it (`packaging/smoke_test.py`). `.github/workflows/build-desktop.yml` is the GitHub Actions workflow that builds both programs on Ubuntu 22.04 and Windows on every push, runs the tests and the smoke test against each finished program, keeps the files as build artifacts, and attaches them to a release when a `v*` tag is pushed.
+
 ## Project layout
 
 ```
@@ -64,9 +80,13 @@ app/
   renders.py          stored books: generate, replace, delete, download, view, print, zip, export folder
   exports.py          layout screen, Page view, PDF/EPUB downloads
   settings_routes.py  admin-only database settings
+  desktop.py          the desktop program's launcher (port, browser, one copy at a time)
+  paths.py, dbinit.py, pgsetup.py   data folder, SQLite preparation and migrations, PostgreSQL set-up
+  fonts/              the fonts packed into the PDFs (with their licences)
   access.py           ownership checks and the completed-book edit lock
   templates/, static/
 sql/schema.sql        PostgreSQL schema (schema scm_bookwriter), safe to re-run to upgrade
+packaging/            PyInstaller recipe, Linux and Windows build scripts, smoke test, CI workflow
 scripts/set_env.py    helper used by the shell scripts to update .env
 scripts/import_terran_book.py   one-off import of the Terran Society manuscript
 scripts/upgrade_terran_book.py  one-off move of that book onto front matter, terms and authors

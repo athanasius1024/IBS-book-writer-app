@@ -49,3 +49,9 @@ tmp/
 # Backups
 *.bak
 *.backup
+
+# Desktop build output
+.venv-desktop/
+build/
+dist/
+*.spec.bak

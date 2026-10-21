@@ -14,6 +14,7 @@ import config
 from imaging import render_markdown_with_images
 from markup import render_markdown, render_markdown_lines  # noqa: F401  (re-exported for templates and tests)
 from models import COVER_PANELS, User, db
+from version import APP_VERSION
 
 login_manager = LoginManager()
 csrf = CSRFProtect()
@@ -35,7 +36,9 @@ def create_app(overrides=None):
         app.config.update(overrides)
 
     if not app.config.get('SECRET_KEY'):
-        if app.config.get('TESTING') or os.environ.get('IBS_DEV') == '1':
+        if config.DESKTOP and not app.config.get('TESTING'):
+            app.config['SECRET_KEY'] = config.load_or_create_secret_key()   # desktop edition: made once, kept
+        elif app.config.get('TESTING') or os.environ.get('IBS_DEV') == '1':
             app.config['SECRET_KEY'] = secrets.token_hex(32)  # ephemeral, dev/test only
         else:
             raise RuntimeError(
@@ -43,6 +46,10 @@ def create_app(overrides=None):
                 '(start.sh generates one for you on first run).')
 
     db.init_app(app)
+    if (config.BACKEND == 'sqlite' and not app.config.get('TESTING')
+            and str(app.config['SQLALCHEMY_DATABASE_URI']).startswith('sqlite')):
+        from dbinit import init_database
+        init_database(app)               # SQLite needs no setup script: tables, pragmas and upgrades happen here
     csrf.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
@@ -70,7 +77,8 @@ def create_app(overrides=None):
     @app.context_processor
     def inject_globals():
         return {'COVER_PANELS': COVER_PANELS,
-                'allow_registration': app.config.get('ALLOW_REGISTRATION', True)}
+                'allow_registration': app.config.get('ALLOW_REGISTRATION', True),
+                'app_version': APP_VERSION}
 
     @app.after_request
     def security_headers(response):

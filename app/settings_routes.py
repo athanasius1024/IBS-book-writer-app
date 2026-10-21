@@ -22,6 +22,9 @@ def _int(value, default):
 @login_required
 @admin_required
 def database_settings():
+    if config.BACKEND == 'sqlite':
+        return render_template('settings/sqlite.html', path=config.SQLITE_PATH, data_dir=config.DATA_DIR,
+                               env_file=config.ENV_FILE)
     config_file = config.DB_CONFIG_FILE
     saved = config.load_db_config_file()
 

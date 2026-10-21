@@ -14,8 +14,9 @@ from flask import current_app
 from weasyprint import CSS, HTML
 from weasyprint.urls import URLFetcher, URLFetcherResponse
 
+import paths
 from bookdoc import DERIVED_SCHEME, MEDIA_SCHEME, BookDoc, cover_has_content, cover_html
-from layout import get_settings, pdf_css, settings_hash
+from layout import ALLOWED_FONT_FILES, FONT_SCHEME, get_settings, pdf_css, settings_hash
 from models import MediaAsset, MediaDerivative
 
 log = logging.getLogger(__name__)
@@ -37,6 +38,8 @@ class MediaFetcher(URLFetcher):
         self.upload_dir = Path(upload_dir).resolve()
 
     def fetch(self, url, headers=None):
+        if url.startswith(FONT_SCHEME):
+            return self._fetch_font(url)
         if url.startswith(DERIVED_SCHEME):
             return self._fetch_derivative(url)
         if not url.startswith(MEDIA_SCHEME):
@@ -52,6 +55,17 @@ class MediaFetcher(URLFetcher):
         if self.upload_dir not in path.parents or not path.is_file():
             raise ValueError('Media file missing')
         return URLFetcherResponse(url, body=path.read_bytes(), headers={'Content-Type': asset.mime_type})
+
+    @staticmethod
+    def _fetch_font(url):
+        """One of the bundled fonts, by exact file name from a fixed list: never a path, never anything else."""
+        name = url[len(FONT_SCHEME):]
+        if name not in ALLOWED_FONT_FILES:
+            raise ValueError(f'Blocked font: {name[:60]}')
+        path = (paths.fonts_dir() / name).resolve()
+        if paths.fonts_dir().resolve() not in path.parents or not path.is_file():
+            raise ValueError('Font file missing')
+        return URLFetcherResponse(url, body=path.read_bytes(), headers={'Content-Type': 'font/ttf'})
 
     def _fetch_derivative(self, url):
         """A cropped / downsized copy of one of the owner's pictures."""

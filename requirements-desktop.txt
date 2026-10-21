@@ -1,0 +1,4 @@
+# Build and run the packaged desktop edition (Windows .exe / single-file Linux app).
+-r requirements.txt
+waitress>=3.0
+pyinstaller>=6.10

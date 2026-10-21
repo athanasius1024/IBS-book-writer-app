@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}Database - IBS Book Writer{% endblock %}
+
+{% block content %}
+<h1 class="mb-4"><i class="bi bi-database"></i> Database</h1>
+
+<div class="card">
+    <div class="card-header bg-primary text-white"><h5 class="mb-0">Built-in database (SQLite)</h5></div>
+    <div class="card-body">
+        <p>This copy of IBS Book Writer keeps everything in one file on this computer. There is nothing to set up and no
+           database server to run.</p>
+        <dl class="row mb-3">
+            <dt class="col-sm-3">Database file</dt><dd class="col-sm-9"><code>{{ path }}</code></dd>
+            {% if data_dir %}
+            <dt class="col-sm-3">Your data folder</dt><dd class="col-sm-9"><code>{{ data_dir }}</code></dd>
+            {% endif %}
+        </dl>
+        <p class="mb-2"><strong>Back up</strong> by closing the program and copying the whole data folder (the database, your
+           pictures and your stored books are all inside it).</p>
+        <p class="mb-0 text-muted">To use a PostgreSQL server instead, close the program and run it once from a terminal with
+           <code>--setup-postgres</code>. It asks for the server details, prepares the database and remembers them in
+           <code>{{ env_file }}</code>.</p>
+    </div>
+</div>
+{% endblock %}
