@@ -1,0 +1,41 @@
+# /etc/systemd/system/ibs-bookwriter.service      (InMotion managed VPS with cPanel, AlmaLinux 9)
+#
+# Assumes the cPanel account "ibsbook" owns everything:
+#   code     /home/ibsbook/app            (git checkout, with .venv and .env inside)
+#   uploads  /home/ibsbook/data/uploads   (UPLOAD_DIR in .env)
+# gunicorn listens on loopback port 8000 only; Apache (cPanel) proxies the site to it.
+# See DEPLOYMENT-INMOTION.md.
+
+[Unit]
+Description=IBS Book Writer (gunicorn)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ibsbook
+Group=ibsbook
+WorkingDirectory=/home/ibsbook/app
+# The app reads /home/ibsbook/app/.env itself (python-dotenv).
+ExecStart=/home/ibsbook/app/.venv/bin/gunicorn --config /home/ibsbook/app/deploy/gunicorn.conf.py
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=40
+KillMode=mixed
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=XDG_CACHE_HOME=/home/ibsbook/.cache
+
+# Sandboxing: the system is read-only to this service except the account's own home folder.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ibsbook
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

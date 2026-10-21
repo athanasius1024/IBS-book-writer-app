@@ -5,6 +5,8 @@ This document has two parts:
 1. **The current setup** - what is running today, how to operate it, and where it falls short of production.
 2. **Deploying to a production-grade environment** - gunicorn + systemd + nginx with HTTPS, a hardened PostgreSQL, scheduled backups, and an upgrade procedure.
 
+**Deploying on an InMotion VPS (cPanel, AlmaLinux 9)?** Use [DEPLOYMENT-INMOTION.md](DEPLOYMENT-INMOTION.md) instead of part 2; its files are in `deploy/inmotion/`.
+
 Ready-to-use files for part 2 are in `deploy/`: `gunicorn.conf.py`, `ibs-bookwriter.service`, `nginx-ibs-bookwriter.conf`, `backup.sh`. Production dependencies are in `requirements-prod.txt`.
 
 ---
