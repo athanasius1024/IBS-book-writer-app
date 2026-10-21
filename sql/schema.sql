@@ -63,6 +63,8 @@ CREATE TABLE IF NOT EXISTS chapter (
     book_id      INTEGER NOT NULL REFERENCES book(book_id) ON DELETE CASCADE,
     title        TEXT    NOT NULL,
     sort_order   INTEGER NOT NULL DEFAULT 0,
+    epigraph_text    TEXT,                          -- Markdown, line breaks kept as written
+    epigraph_source  TEXT,                          -- attribution
     created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     modified_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -141,3 +143,65 @@ CREATE TABLE IF NOT EXISTS book_term (
 );
 CREATE INDEX IF NOT EXISTS ix_book_term_book_id ON book_term(book_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_book_term_name ON book_term(book_id, lower(term));
+
+-- Chapter epigraphs (additive).
+ALTER TABLE chapter ADD COLUMN IF NOT EXISTS epigraph_text   TEXT;
+ALTER TABLE chapter ADD COLUMN IF NOT EXISTS epigraph_source TEXT;
+
+-- Edited Contents page: a book with no rows here uses the automatic Contents.
+CREATE TABLE IF NOT EXISTS book_toc_entry (
+    entry_id     SERIAL PRIMARY KEY,
+    book_id      INTEGER NOT NULL REFERENCES book(book_id) ON DELETE CASCADE,
+    kind         VARCHAR(20) NOT NULL,
+    chapter_id   INTEGER REFERENCES chapter(chapter_id) ON DELETE CASCADE,
+    block_id     INTEGER REFERENCES content_block(block_id) ON DELETE CASCADE,
+    section_key  VARCHAR(20),
+    label        TEXT,
+    level        INTEGER NOT NULL DEFAULT 0,
+    visible      BOOLEAN NOT NULL DEFAULT TRUE,
+    sort_order   INTEGER NOT NULL DEFAULT 0,
+    CONSTRAINT ck_toc_kind    CHECK (kind IN ('chapter', 'heading', 'section', 'part')),
+    CONSTRAINT ck_toc_level   CHECK (level BETWEEN 0 AND 2),
+    CONSTRAINT ck_toc_section CHECK (section_key IS NULL OR section_key IN ('glossary', 'index', 'about'))
+);
+CREATE INDEX IF NOT EXISTS ix_book_toc_entry_book_id    ON book_toc_entry(book_id);
+CREATE INDEX IF NOT EXISTS ix_book_toc_entry_chapter_id ON book_toc_entry(chapter_id);
+CREATE INDEX IF NOT EXISTS ix_book_toc_entry_block_id   ON book_toc_entry(block_id);
+
+-- Cached cropped / downsized copies of media assets (crop in ten-thousandths of the original).
+CREATE TABLE IF NOT EXISTS media_derivative (
+    derivative_id  SERIAL PRIMARY KEY,
+    asset_id       INTEGER NOT NULL REFERENCES media_asset(asset_id) ON DELETE CASCADE,
+    user_id        INTEGER NOT NULL REFERENCES app_user(user_id) ON DELETE CASCADE,
+    crop_x         INTEGER NOT NULL DEFAULT 0,
+    crop_y         INTEGER NOT NULL DEFAULT 0,
+    crop_w         INTEGER NOT NULL DEFAULT 10000,
+    crop_h         INTEGER NOT NULL DEFAULT 10000,
+    max_px         INTEGER NOT NULL DEFAULT 2000,
+    file_path      TEXT    NOT NULL,                  -- relative to UPLOAD_DIR
+    mime_type      TEXT,
+    file_size      INTEGER,
+    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_media_derivative_spec UNIQUE (asset_id, crop_x, crop_y, crop_w, crop_h, max_px)
+);
+CREATE INDEX IF NOT EXISTS ix_media_derivative_asset_id ON media_derivative(asset_id);
+CREATE INDEX IF NOT EXISTS ix_media_derivative_user_id  ON media_derivative(user_id);
+
+-- Stored generated books (PDF, EPUB, HTML, ODT) that the author keeps, replaces or deletes.
+CREATE TABLE IF NOT EXISTS rendered_book (
+    render_id         SERIAL PRIMARY KEY,
+    book_id           INTEGER NOT NULL REFERENCES book(book_id) ON DELETE CASCADE,
+    user_id           INTEGER NOT NULL REFERENCES app_user(user_id) ON DELETE CASCADE,
+    format            VARCHAR(10) NOT NULL,
+    file_path         TEXT    NOT NULL,               -- relative to UPLOAD_DIR
+    file_name         TEXT    NOT NULL,               -- name offered on download
+    file_size         INTEGER,
+    sha256            VARCHAR(64),
+    book_version      VARCHAR(20),
+    book_modified_at  TIMESTAMP,                      -- the book's edit time when this was built
+    page_count        INTEGER,                        -- PDF only
+    generated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT ck_rendered_book_format CHECK (format IN ('pdf', 'epub', 'html', 'odt'))
+);
+CREATE INDEX IF NOT EXISTS ix_rendered_book_book_id ON rendered_book(book_id);
+CREATE INDEX IF NOT EXISTS ix_rendered_book_user_id ON rendered_book(user_id);

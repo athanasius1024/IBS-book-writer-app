@@ -19,6 +19,21 @@ def fk(target):
 STATUS_DRAFT = 'draft'
 STATUS_COMPLETED = 'completed'
 
+# Generated book formats that can be stored: (key, label, file extension, MIME type)
+RENDER_FORMATS = [
+    ('pdf', 'PDF', 'pdf', 'application/pdf'),
+    ('epub', 'EPUB', 'epub', 'application/epub+zip'),
+    ('html', 'HTML', 'html', 'text/html'),
+    ('odt', 'ODT', 'odt', 'application/vnd.oasis.opendocument.text'),
+]
+RENDER_FORMAT_KEYS = [row[0] for row in RENDER_FORMATS]
+MAX_RENDERS_PER_FORMAT = 10
+
+# Contents (table of contents) entry kinds and the back-matter sections they can point at
+TOC_KINDS = ['chapter', 'heading', 'section', 'part']
+TOC_SECTION_KEYS = ['glossary', 'index', 'about']
+TOC_MAX_LEVEL = 2
+
 # (panel key, human label) in the order they are displayed.
 COVER_PANELS = [
     ('front', 'Front Cover'),
@@ -105,6 +120,10 @@ class Book(db.Model):
     terms = db.relationship('BookTerm', back_populates='book', cascade='all, delete-orphan')
     layout = db.relationship('BookLayout', back_populates='book', cascade='all, delete-orphan',
                              uselist=False)
+    toc_entries = db.relationship('BookTocEntry', back_populates='book', cascade='all, delete-orphan',
+                                  order_by='BookTocEntry.sort_order, BookTocEntry.entry_id')
+    renders = db.relationship('RenderedBook', back_populates='book', cascade='all, delete-orphan',
+                              order_by='RenderedBook.generated_at.desc(), RenderedBook.render_id.desc()')
 
     @property
     def is_completed(self):
@@ -161,14 +180,29 @@ class Book(db.Model):
                 panel=c.panel, content_text=c.content_text, asset_id=c.asset_id,
                 background_color=c.background_color, text_color=c.text_color))
         copy.init_covers()
+        new_chapters, new_blocks = {}, {}     # old id -> copied object, for the Contents entries below
         for ch in self.chapters:
-            new_ch = Chapter(title=ch.title, sort_order=ch.sort_order)
+            new_ch = Chapter(title=ch.title, sort_order=ch.sort_order,
+                             epigraph_text=ch.epigraph_text, epigraph_source=ch.epigraph_source)
             for blk in ch.blocks:
-                new_ch.blocks.append(ContentBlock(
+                new_blk = ContentBlock(
                     block_type=blk.block_type, content_text=blk.content_text,
                     content_data=blk.content_data, asset_id=blk.asset_id,
-                    sort_order=blk.sort_order))
+                    sort_order=blk.sort_order)
+                new_ch.blocks.append(new_blk)
+                new_blocks[blk.block_id] = new_blk
             copy.chapters.append(new_ch)
+            new_chapters[ch.chapter_id] = new_ch
+        # An edited Contents travels with the book, pointing at the copied chapters and headings.
+        for entry in self.toc_entries:
+            if entry.kind == 'chapter' and entry.chapter_id not in new_chapters:
+                continue
+            if entry.kind == 'heading' and entry.block_id not in new_blocks:
+                continue
+            copy.toc_entries.append(BookTocEntry(
+                kind=entry.kind, section_key=entry.section_key, label=entry.label, level=entry.level,
+                visible=entry.visible, sort_order=entry.sort_order,
+                chapter=new_chapters.get(entry.chapter_id), block=new_blocks.get(entry.block_id)))
         # Front matter, authors (bios are preserved as written), terms and layout travel with the book.
         for page in self.pages:
             copy.pages.append(BookPage(
@@ -223,12 +257,21 @@ class Chapter(db.Model):
                         nullable=False, index=True)
     title = db.Column(db.Text, nullable=False)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
+    epigraph_text = db.Column(db.Text)       # Markdown, line breaks kept as written
+    epigraph_source = db.Column(db.Text)     # attribution, e.g. "Tao Teh Ching #78"
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     modified_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     book = db.relationship('Book', back_populates='chapters')
     blocks = db.relationship('ContentBlock', back_populates='chapter', cascade='all, delete-orphan',
                              order_by='ContentBlock.sort_order, ContentBlock.block_id')
+    # Contents entries that point at this chapter go away with it (no delete-orphan: an entry's
+    # parent is the book; the chapter link is optional).
+    toc_entries = db.relationship('BookTocEntry', back_populates='chapter', cascade='all')
+
+    @property
+    def has_epigraph(self):
+        return bool((self.epigraph_text or '').strip())
 
 
 class ContentBlock(db.Model):
@@ -263,6 +306,7 @@ class ContentBlock(db.Model):
 
     chapter = db.relationship('Chapter', back_populates='blocks')
     asset = db.relationship('MediaAsset')
+    toc_entries = db.relationship('BookTocEntry', back_populates='block', cascade='all')
 
     @property
     def type_label(self):
@@ -296,6 +340,109 @@ class MediaAsset(db.Model):
     file_size = db.Column(db.Integer)
     mime_type = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class MediaDerivative(db.Model):
+    """A cached cropped and/or downsized copy of a media asset (the original is never changed).
+
+    The crop rectangle is stored as integers in ten-thousandths of the original width/height, so
+    the unique key below is exact. (0, 0, 10000, 10000) means 'no crop'.
+    """
+    __tablename__ = 'media_derivative'
+    __table_args__ = (
+        db.UniqueConstraint('asset_id', 'crop_x', 'crop_y', 'crop_w', 'crop_h', 'max_px',
+                            name='uq_media_derivative_spec'),
+    )
+
+    derivative_id = db.Column(db.Integer, primary_key=True)
+    asset_id = db.Column(db.Integer, db.ForeignKey(fk('media_asset.asset_id'), ondelete='CASCADE'),
+                         nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(fk('app_user.user_id'), ondelete='CASCADE'),
+                        nullable=False, index=True)
+    crop_x = db.Column(db.Integer, nullable=False, default=0)
+    crop_y = db.Column(db.Integer, nullable=False, default=0)
+    crop_w = db.Column(db.Integer, nullable=False, default=10000)
+    crop_h = db.Column(db.Integer, nullable=False, default=10000)
+    max_px = db.Column(db.Integer, nullable=False, default=2000)   # longest side limit
+    file_path = db.Column(db.Text, nullable=False)                  # relative to UPLOAD_DIR
+    mime_type = db.Column(db.Text)
+    file_size = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    asset = db.relationship('MediaAsset', backref=db.backref('derivatives', cascade='all, delete-orphan'))
+
+
+class BookTocEntry(db.Model):
+    """One line of an edited Contents page. A book with no rows uses the automatic Contents.
+
+    kind decides what the line points at:
+      chapter  chapter_id        heading  block_id (a heading block)
+      section  section_key       (glossary / index / about)
+      part     nothing: a divider line such as 'Part One' (no link, no page number)
+    label overrides the target's own title when set.
+    """
+    __tablename__ = 'book_toc_entry'
+    __table_args__ = (
+        db.CheckConstraint("kind IN ('chapter', 'heading', 'section', 'part')", name='ck_toc_kind'),
+        db.CheckConstraint('level BETWEEN 0 AND 2', name='ck_toc_level'),
+        db.CheckConstraint("section_key IS NULL OR section_key IN ('glossary', 'index', 'about')",
+                           name='ck_toc_section'),
+    )
+
+    entry_id = db.Column(db.Integer, primary_key=True)
+    book_id = db.Column(db.Integer, db.ForeignKey(fk('book.book_id'), ondelete='CASCADE'),
+                        nullable=False, index=True)
+    kind = db.Column(db.String(20), nullable=False)
+    chapter_id = db.Column(db.Integer, db.ForeignKey(fk('chapter.chapter_id'), ondelete='CASCADE'), index=True)
+    block_id = db.Column(db.Integer, db.ForeignKey(fk('content_block.block_id'), ondelete='CASCADE'), index=True)
+    section_key = db.Column(db.String(20))
+    label = db.Column(db.Text)
+    level = db.Column(db.Integer, nullable=False, default=0)
+    visible = db.Column(db.Boolean, nullable=False, default=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+
+    book = db.relationship('Book', back_populates='toc_entries')
+    chapter = db.relationship('Chapter', back_populates='toc_entries')
+    block = db.relationship('ContentBlock', back_populates='toc_entries')
+
+
+class RenderedBook(db.Model):
+    """A stored generated copy of a book (PDF, EPUB, HTML or ODT) that the author can keep."""
+    __tablename__ = 'rendered_book'
+    __table_args__ = (
+        db.CheckConstraint("format IN ('pdf', 'epub', 'html', 'odt')", name='ck_rendered_book_format'),
+    )
+
+    render_id = db.Column(db.Integer, primary_key=True)
+    book_id = db.Column(db.Integer, db.ForeignKey(fk('book.book_id'), ondelete='CASCADE'),
+                        nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(fk('app_user.user_id'), ondelete='CASCADE'),
+                        nullable=False, index=True)
+    format = db.Column(db.String(10), nullable=False)
+    file_path = db.Column(db.Text, nullable=False)       # relative to UPLOAD_DIR, generated name
+    file_name = db.Column(db.Text, nullable=False)       # name offered on download
+    file_size = db.Column(db.Integer)
+    sha256 = db.Column(db.String(64))
+    book_version = db.Column(db.String(20))
+    book_modified_at = db.Column(db.DateTime)            # the book's edit time when this was built
+    page_count = db.Column(db.Integer)                   # PDF only
+    generated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    book = db.relationship('Book', back_populates='renders')
+
+    @property
+    def format_label(self):
+        return next((label for key, label, _, _ in RENDER_FORMATS if key == self.format), self.format)
+
+    @property
+    def mime_type(self):
+        return next((mime for key, _, _, mime in RENDER_FORMATS if key == self.format), 'application/octet-stream')
+
+    @property
+    def is_outdated(self):
+        """True if the book was edited after this copy was generated."""
+        return bool(self.book and self.book.modified_at and self.book_modified_at
+                    and self.book.modified_at > self.book_modified_at)
 
 
 class BookLayout(db.Model):

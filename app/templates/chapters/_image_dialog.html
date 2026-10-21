@@ -1,0 +1,92 @@
+{# The Insert image dialog used by the text-block editors. Driven by static/js/images.js. #}
+<div class="modal fade" id="imageModal" tabindex="-1" aria-hidden="true" aria-labelledby="imageModalTitle">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle"><i class="bi bi-image"></i> Insert image</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="img-step-pick">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                        <label class="btn btn-outline-primary mb-0">
+                            <i class="bi bi-upload"></i> Upload new picture
+                            <input type="file" id="img-upload" multiple hidden accept="image/png,image/jpeg,image/gif,image/webp">
+                        </label>
+                        <span class="small text-muted" id="img-upload-msg">Or choose one from your media library.</span>
+                    </div>
+                    <div class="row g-2" id="img-grid"></div>
+                </div>
+
+                <div id="img-step-edit" hidden>
+                    <div class="row g-3">
+                        <div class="col-lg-8">
+                            <div class="img-stage-wrap">
+                                <div class="img-stage" id="img-stage">
+                                    <img id="img-stage-img" alt="">
+                                    <div class="crop-overlay" id="crop-overlay">
+                                        <div class="crop-box" id="crop-box" hidden>
+                                            <span class="crop-h" data-h="nw"></span><span class="crop-h" data-h="ne"></span>
+                                            <span class="crop-h" data-h="sw"></span><span class="crop-h" data-h="se"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-text">Drag on the picture to choose the part to keep. Drag inside the box to move it,
+                                or a corner to resize it. Click outside the box to clear the crop. The original file is never changed.</div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label class="form-label" for="img-ratio">Crop shape</label>
+                                <div class="input-group">
+                                    <select class="form-select" id="img-ratio">
+                                        <option value="free">Free</option>
+                                        <option value="1:1">Square (1:1)</option>
+                                        <option value="4:3">Landscape (4:3)</option>
+                                        <option value="16:9">Wide (16:9)</option>
+                                        <option value="3:4">Portrait (3:4)</option>
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary" id="img-clear-crop">Clear crop</button>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="img-width">Width: <strong id="img-width-label">100%</strong> of the text width</label>
+                                <input type="range" class="form-range" id="img-width" min="10" max="100" step="5" value="100">
+                            </div>
+                            <div class="mb-3">
+                                <div class="form-label">Placement</div>
+                                <div class="btn-group w-100" role="group" aria-label="Placement">
+                                    <input type="radio" class="btn-check" name="img-align" id="img-align-left" value="left">
+                                    <label class="btn btn-outline-secondary" for="img-align-left"><i class="bi bi-align-start"></i> Left</label>
+                                    <input type="radio" class="btn-check" name="img-align" id="img-align-center" value="center" checked>
+                                    <label class="btn btn-outline-secondary" for="img-align-center"><i class="bi bi-align-center"></i> Center</label>
+                                    <input type="radio" class="btn-check" name="img-align" id="img-align-right" value="right">
+                                    <label class="btn btn-outline-secondary" for="img-align-right"><i class="bi bi-align-end"></i> Right</label>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="img-caption">Caption (shown under the picture)</label>
+                                <input type="text" class="form-control" id="img-caption" maxlength="300">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="img-alt">Description for screen readers (optional)</label>
+                                <input type="text" class="form-control" id="img-alt" maxlength="300" placeholder="Defaults to the caption">
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="img-own-line" checked>
+                                <label class="form-check-label" for="img-own-line">On its own line, as a figure</label>
+                            </div>
+                            <div class="small text-muted">Text that will be inserted:</div>
+                            <code class="d-block small text-break" id="img-markdown"></code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary me-auto" id="img-back" hidden><i class="bi bi-arrow-left"></i> Choose another picture</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="img-insert" hidden><i class="bi bi-check2"></i> <span id="img-insert-label">Insert</span></button>
+            </div>
+        </div>
+    </div>
+</div>

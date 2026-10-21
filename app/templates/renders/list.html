@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field, status_badge %}
+{% block title %}Stored books - {{ book.title }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item active">Stored books</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0"><i class="bi bi-archive"></i> Stored books {{ status_badge(book) }}</h1>
+    <span class="text-muted">Now at version <strong>{{ book.version }}</strong></span>
+</div>
+
+<p class="text-muted">
+    Keep finished copies of this book as PDF, EPUB, HTML or ODT (an editable document for LibreOffice or Word). Each copy
+    shows the book's version and the date it was generated at the bottom of its Contents. Download a copy to save it to any
+    folder or drive, print the PDF or HTML, replace it with a fresh build, or delete it.
+</p>
+
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-plus-circle"></i> Generate</div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('renders.generate_renders', book_id=book.book_id) }}"
+              class="d-flex flex-wrap align-items-center gap-3">
+            {{ csrf_field() }}
+            {% for key, label, ext, mime in formats %}
+            <div class="form-check form-check-inline mb-0">
+                <input class="form-check-input" type="checkbox" name="formats" value="{{ key }}" id="gen-{{ key }}"
+                       {{ 'disabled' if counts[key] >= maximum }}>
+                <label class="form-check-label" for="gen-{{ key }}">{{ label }}
+                    <span class="text-muted small">({{ counts[key] }}/{{ maximum }})</span></label>
+            </div>
+            {% endfor %}
+            <button class="btn btn-primary"><i class="bi bi-gear"></i> Generate selected</button>
+            <button class="btn btn-outline-primary" name="all" value="1"><i class="bi bi-gear-wide-connected"></i> Generate all four</button>
+        </form>
+        <div class="form-text">Building a book takes a few seconds. All the formats generated together carry the same version and date.
+            You can keep up to {{ maximum }} copies of each format.</div>
+    </div>
+</div>
+
+{% if not rows %}
+<div class="empty-state">
+    <i class="bi bi-archive"></i>
+    <p>No stored copies yet. Choose a format above and click Generate.</p>
+</div>
+{% else %}
+<form method="POST" action="{{ url_for('renders.selected_action', book_id=book.book_id) }}" id="selection-form">
+    {{ csrf_field() }}
+    <div class="card mb-3">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:2.2rem"><input type="checkbox" class="form-check-input" id="select-all" aria-label="Select all"></th>
+                        <th>Format</th><th>File</th><th class="text-end">Size</th><th>Version</th><th>Generated (UTC)</th><th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    {% set r = row.render %}
+                    <tr>
+                        <td><input type="checkbox" class="form-check-input pick" name="ids" value="{{ r.render_id }}" aria-label="Select {{ r.file_name }}"></td>
+                        <td><span class="badge bg-{{ {'pdf': 'danger', 'epub': 'success', 'html': 'primary', 'odt': 'warning text-dark'}[r.format] }}">{{ r.format_label }}</span>
+                            {% if r.page_count %}<span class="text-muted small">{{ r.page_count }} pp</span>{% endif %}</td>
+                        <td class="text-break">{{ r.file_name }}</td>
+                        <td class="text-end text-nowrap">
+                            {% if r.file_size >= 1048576 %}{{ '%.1f' | format(r.file_size / 1048576) }} MB{% else %}{{ '%.0f' | format(r.file_size / 1024) }} KB{% endif %}
+                        </td>
+                        <td>{{ r.book_version }}</td>
+                        <td class="text-nowrap">{{ r.generated_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            {% if not row.present %}<span class="badge bg-danger">File missing</span>
+                            {% elif r.is_outdated %}<span class="badge bg-warning text-dark" title="The book was edited after this copy was generated">Out of date</span>
+                            {% else %}<span class="badge bg-success">Current</span>{% endif %}
+                        </td>
+                        <td class="text-end text-nowrap">
+                            <div class="btn-group btn-group-sm">
+                                {% if row.present %}
+                                <a class="btn btn-outline-primary" href="{{ url_for('renders.download', render_id=r.render_id) }}" title="Download (the browser lets you choose the folder)"><i class="bi bi-download"></i></a>
+                                {% if r.format in printable %}
+                                <a class="btn btn-outline-secondary" href="{{ url_for('renders.view', render_id=r.render_id) }}" target="_blank" rel="noopener" title="View in the browser"><i class="bi bi-eye"></i></a>
+                                <a class="btn btn-outline-secondary" href="{{ url_for('renders.print_render', render_id=r.render_id) }}" title="Print"><i class="bi bi-printer"></i></a>
+                                {% endif %}
+                                {% if export_dir %}
+                                <button type="submit" class="btn btn-outline-secondary" title="Save a copy to the export folder"
+                                        formaction="{{ url_for('renders.save_to_folder', render_id=r.render_id) }}"><i class="bi bi-folder-check"></i></button>
+                                {% endif %}
+                                {% endif %}
+                                <button type="submit" class="btn btn-outline-secondary" title="Replace with a freshly generated version"
+                                        formaction="{{ url_for('renders.replace_render', render_id=r.render_id) }}"
+                                        onclick="return confirm('Replace this copy with a freshly generated version?');"><i class="bi bi-arrow-repeat"></i></button>
+                                <button type="submit" class="btn btn-outline-danger" title="Delete"
+                                        formaction="{{ url_for('renders.delete_one', render_id=r.render_id) }}"
+                                        onclick="return confirm('Delete this stored copy?');"><i class="bi bi-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex flex-wrap align-items-center gap-2">
+            <span class="text-muted small me-2">With the ticked copies:</span>
+            <button class="btn btn-sm btn-primary" name="action" value="zip"><i class="bi bi-file-earmark-zip"></i> Download as one zip</button>
+            {% if export_dir %}
+            <button class="btn btn-sm btn-outline-primary" name="action" value="save-to-folder" title="{{ export_dir }}"><i class="bi bi-folder-check"></i> Save to the export folder</button>
+            {% endif %}
+            <button class="btn btn-sm btn-outline-danger" name="action" value="delete"
+                    onclick="return confirm('Delete the ticked stored copies?');"><i class="bi bi-trash"></i> Delete</button>
+        </div>
+    </div>
+</form>
+{% if export_dir %}
+<p class="small text-muted">The export folder is <code>{{ export_dir }}</code>, on the computer that runs this program. Use the
+    <i class="bi bi-folder-check"></i> button on a row to save that one copy there; nothing is ever overwritten.</p>
+{% endif %}
+<script>
+    document.getElementById('select-all').addEventListener('change', function (e) {
+        document.querySelectorAll('.pick').forEach(function (box) { box.checked = e.target.checked; });
+    });
+</script>
+{% endif %}
+{% endblock %}

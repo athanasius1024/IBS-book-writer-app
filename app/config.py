@@ -62,6 +62,10 @@ SQLALCHEMY_TRACK_MODIFICATIONS = False
 UPLOAD_DIR = Path(os.environ.get('UPLOAD_DIR') or (BASE_DIR / 'uploads'))
 MAX_CONTENT_LENGTH = 8 * 1024 * 1024  # 8 MB
 
+# Optional folder (on the machine that runs the app) where stored books can also be saved with one click.
+# Unset = the button is not offered; downloads through the browser always work.
+EXPORT_DIR = os.environ.get('EXPORT_DIR') or None
+
 # Authentication
 MIN_PASSWORD_LENGTH = 8
 ALLOW_REGISTRATION = os.environ.get('ALLOW_REGISTRATION', '1').lower() not in ('0', 'false', 'no')

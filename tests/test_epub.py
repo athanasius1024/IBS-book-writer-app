@@ -124,7 +124,7 @@ def test_semantic_front_and_back_matter(epub_bytes):
                for t in joined.values())
     assert any('epub:type="glossary"' in t for t in joined.values())
     assert any('epub:type="index"' in t for t in joined.values())
-    about = next(t for t in joined.values() if 'About the Author' in t)
+    about = joined['OEBPS/text/about.xhtml']
     assert 'Ann writes books.' in about and '<img' in about and 'author.png' not in about  # packaged path, not name
 
 

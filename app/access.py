@@ -10,7 +10,8 @@ from functools import wraps
 from flask import abort, flash, make_response, redirect, request, url_for
 from flask_login import current_user
 
-from models import Book, BookAuthor, BookPage, BookTerm, Chapter, ContentBlock, MediaAsset
+from models import (Book, BookAuthor, BookPage, BookTerm, BookTocEntry, Chapter, ContentBlock,
+                    MediaAsset, RenderedBook)
 
 COMPLETED_MESSAGE = ('This book is completed and read-only. '
                      'Create an editable copy to make changes.')
@@ -66,6 +67,17 @@ def owned_author_or_404(author_id):
 
 def owned_term_or_404(term_id):
     return _owned_child_or_404(BookTerm, BookTerm.term_id, term_id)
+
+
+def owned_toc_entry_or_404(entry_id):
+    return _owned_child_or_404(BookTocEntry, BookTocEntry.entry_id, entry_id)
+
+
+def owned_render_or_404(render_id):
+    render = RenderedBook.query.filter_by(render_id=render_id, user_id=current_user.user_id).first()
+    if render is None:
+        abort(404)
+    return render
 
 
 def owned_asset_or_404(asset_id):

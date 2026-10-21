@@ -16,9 +16,10 @@ from pathlib import Path
 
 from flask import current_app
 
-from bookdoc import MEDIA_SCHEME, cover_has_content, cover_html
+from bookdoc import DERIVED_SCHEME, MEDIA_SCHEME, cover_has_content, cover_html
 from layout import epub_css
-from models import MediaAsset
+from models import MediaAsset, MediaDerivative
+from toc import nested_ol
 
 NAMESPACE = uuid.UUID('7b8f5a60-3b1e-4a52-9a43-1b0c2d9c5e11')
 VOID_TAGS = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'}
@@ -105,6 +106,7 @@ class EpubBuilder:
         self.items = []
         self.anchor_file = {}         # anchor id -> OEBPS-relative file that contains it
         self.images = {}              # asset_id -> (href, media_type, bytes) or None
+        self.derived = {}             # derivative_id -> (href, media_type, bytes) or None (cropped copies)
         self.cover_image_id = None
         self.upload_dir = Path(current_app.config['UPLOAD_DIR']).resolve()
 
@@ -131,7 +133,26 @@ class EpubBuilder:
         self.images[asset_id] = entry
         return entry
 
+    def _load_derivative(self, derivative_id):
+        """A cropped / downsized copy (always PNG or JPEG, both EPUB core types)."""
+        if derivative_id in self.derived:
+            return self.derived[derivative_id]
+        entry = None
+        row = MediaDerivative.query.filter_by(derivative_id=derivative_id, user_id=self.book.user_id).first()
+        if row is not None and row.mime_type in EXTENSIONS:
+            path = (self.upload_dir / row.file_path).resolve()
+            if self.upload_dir in path.parents and path.is_file():
+                entry = (f'images/crop-{derivative_id}.{EXTENSIONS[row.mime_type]}', row.mime_type, path.read_bytes())
+        self.derived[derivative_id] = entry
+        return entry
+
     def _resolve_image(self, src):
+        if src.startswith(DERIVED_SCHEME):
+            try:
+                entry = self._load_derivative(int(src[len(DERIVED_SCHEME):]))
+            except ValueError:
+                return None
+            return f'../{entry[0]}' if entry else None
         if not src.startswith(MEDIA_SCHEME):
             return None
         try:
@@ -164,6 +185,9 @@ class EpubBuilder:
             self._add(page.key, f'{page.key}.xhtml', page.title,
                       f'<section class="fm-page {page.classes}" id="{page.anchor}" epub:type="{kind}">{page.html}</section>',
                       'frontmatter')
+        if s['include_contents'] and doc.has_contents():
+            # A reflowable book has no fixed page numbers, so this Contents page is links only.
+            self._add('contents', 'contents.xhtml', 'Contents', doc.toc_html(), 'frontmatter')
         for number, chapter in enumerate(doc.chapters, start=1):
             self._add(f'chapter-{number}', f'chapter-{number:03d}.xhtml', chapter['title'],
                       f'<section epub:type="chapter">{chapter["html"]}</section>', 'bodymatter', in_toc=True)
@@ -224,9 +248,22 @@ class EpubBuilder:
                 entries.append((page, current))
         return entries
 
+    def _nav_list(self):
+        """The <ol> of the navigation document: the author's edited Contents (nested, with part
+        dividers) if there is one, else one line per chapter and back-matter section."""
+        if self.doc.has_custom_toc:
+            def href_for(anchor):
+                file = self.anchor_file.get(anchor)
+                return f'{file}#{anchor}' if file else None
+            nested = nested_ol(self.doc.toc_lines(), href_for)
+            if nested:
+                return nested
+        toc = ''.join(f'<li><a href="{i.href}">{xml_text(i.title)}</a></li>' for i in self.items if i.in_toc)
+        return f'<ol>{toc}</ol>'
+
     def nav_xhtml(self):
         language = self.settings['language']
-        toc = ''.join(f'<li><a href="{i.href}">{xml_text(i.title)}</a></li>' for i in self.items if i.in_toc)
+        toc = self._nav_list()
         by_key = {i.key: i for i in self.items}
         landmarks = []
         if 'cover' in by_key:
@@ -247,7 +284,8 @@ class EpubBuilder:
                 '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" '
                 f'lang="{language}" xml:lang="{language}">\n<head>\n<meta charset="utf-8"/>\n'
                 f'<title>{xml_text(self.book.title)}</title>\n</head>\n<body>\n'
-                f'<nav epub:type="toc" id="toc"><h1>Contents</h1><ol>{toc}</ol></nav>\n'
+                f'<nav epub:type="toc" id="toc"><h1>Contents</h1>{toc}</nav>\n'
+                f'<p class="toc-stamp">{xml_text(self.doc.stamp())}</p>\n'
                 f'<nav epub:type="landmarks" hidden="hidden"><h2>Guide</h2><ol>{"".join(landmarks)}</ol></nav>\n'
                 f'{page_nav}</body>\n</html>\n')
 
@@ -282,6 +320,10 @@ class EpubBuilder:
                 href, media_type, _ = entry
                 props = ' properties="cover-image"' if asset_id == self.cover_image_id else ''
                 manifest.append(f'<item id="img-{asset_id}" href="{href}" media-type="{media_type}"{props}/>')
+        for derivative_id, entry in self.derived.items():
+            if entry:
+                href, media_type, _ = entry
+                manifest.append(f'<item id="dimg-{derivative_id}" href="{href}" media-type="{media_type}"/>')
         spine = []
         for item in self.items:
             manifest.append(f'<item id="{item.manifest_id}" href="{item.href}" media-type="application/xhtml+xml"/>')
@@ -319,7 +361,7 @@ class EpubBuilder:
             write('OEBPS/styles/book.css', epub_css(self.settings))
             for item in self.items:
                 write(f'OEBPS/{item.href}', xhtml[item.key])
-            for entry in self.images.values():
+            for entry in list(self.images.values()) + list(self.derived.values()):
                 if entry:
                     write(f'OEBPS/{entry[0]}', entry[2])
         return buffer.getvalue()

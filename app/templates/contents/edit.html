@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf_field, status_badge %}
+{% block title %}Contents - {{ book.title }} - IBS Book Writer{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('books.list') }}">My Books</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('books.detail', book_id=book.book_id) }}">{{ book.title }}</a></li>
+        <li class="breadcrumb-item active">Contents</li>
+    </ol>
+</nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="mb-0"><i class="bi bi-list-nested"></i> Contents {{ status_badge(book) }}</h1>
+    <a href="{{ url_for('exports.layout_edit', book_id=book.book_id) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-file-earmark-pdf"></i> Layout &amp; Page view
+    </a>
+</div>
+
+<p class="text-muted">
+    The Contents page lists your chapters and the Glossary, Index and About pages. Page numbers are filled in
+    automatically when the book is built. It ends with a small line reading
+    <em>{{ stamp }}</em>.
+</p>
+
+{% if book.is_completed %}
+<div class="alert alert-info"><i class="bi bi-lock-fill"></i> This book is completed and read-only.</div>
+{% endif %}
+
+{% if not custom %}
+<div class="card mb-4">
+    <div class="card-header">Automatic Contents</div>
+    <ul class="list-group list-group-flush">
+        {% for line in automatic %}
+        <li class="list-group-item">{{ line.title }}</li>
+        {% else %}
+        <li class="list-group-item text-muted">Nothing to list yet. Add a chapter first.</li>
+        {% endfor %}
+    </ul>
+    {% if not book.is_completed %}
+    <div class="card-footer">
+        <form method="POST" action="{{ url_for('contents.customize', book_id=book.book_id) }}"
+              class="d-flex flex-wrap align-items-center gap-3">
+            {{ csrf_field() }}
+            <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" name="with_headings" value="1" id="with-headings">
+                <label class="form-check-label" for="with-headings">Also list the Large and Medium headings inside each chapter</label>
+            </div>
+            <button class="btn btn-primary"><i class="bi bi-pencil-square"></i> Customize contents</button>
+        </form>
+        <div class="form-text">Customizing copies this list so you can rename, hide, indent and reorder lines, add headings and
+            part dividers such as &ldquo;Part One&rdquo;. You can return to the automatic list at any time.</div>
+    </div>
+    {% endif %}
+</div>
+{% else %}
+
+{% if missing_chapters and not book.is_completed %}
+<div class="alert alert-warning d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <span><i class="bi bi-exclamation-triangle"></i>
+        {{ missing_chapters | length }} chapter{{ '' if missing_chapters | length == 1 else 's' }} not in this Contents:
+        {{ missing_chapters | map(attribute='title') | join(', ') }}.</span>
+    <form method="POST" action="{{ url_for('contents.add_missing', book_id=book.book_id) }}">
+        {{ csrf_field() }}<button class="btn btn-sm btn-warning">Add missing chapters</button>
+    </form>
+</div>
+{% endif %}
+
+<div class="card mb-4">
+    <div class="card-header">Your Contents <span class="badge bg-secondary">{{ rows | length }} line{{ '' if rows | length == 1 else 's' }}</span></div>
+    <ul class="list-group list-group-flush">
+        {% for row in rows %}
+        {% set e = row.entry %}
+        <li class="list-group-item toc-row {{ 'text-muted' if not e.visible }}">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="badge bg-{{ {'chapter': 'primary', 'heading': 'info text-dark', 'section': 'secondary', 'part': 'dark'}[e.kind] }}">{{ e.kind }}</span>
+                <span class="text-muted small">level {{ e.level }}</span>
+                {% if not e.visible %}<span class="badge bg-light text-dark border">hidden</span>{% endif %}
+                {% if row.broken %}<span class="badge bg-danger">target removed</span>{% endif %}
+                <form method="POST" action="{{ url_for('contents.entry_update', entry_id=e.entry_id) }}"
+                      class="d-flex gap-2 flex-grow-1" style="padding-left: {{ e.level * 1.5 }}rem">
+                    {{ csrf_field() }}<input type="hidden" name="action" value="save">
+                    <input type="text" class="form-control form-control-sm" name="label" maxlength="300"
+                           value="{{ e.label or '' }}" placeholder="{{ row.default or 'Divider text' }}"
+                           {{ 'disabled' if book.is_completed }} aria-label="Contents text">
+                    {% if not book.is_completed %}<button class="btn btn-sm btn-outline-primary" title="Save text"><i class="bi bi-save"></i></button>{% endif %}
+                </form>
+                {% if not book.is_completed %}
+                <div class="btn-group btn-group-sm">
+                    {% for action, icon, title, disabled in [
+                        ('up', 'arrow-up', 'Move up', loop.first),
+                        ('down', 'arrow-down', 'Move down', loop.last),
+                        ('outdent', 'text-indent-right', 'Outdent', e.level == 0),
+                        ('indent', 'text-indent-left', 'Indent', e.level >= max_level)] %}
+                    <form method="POST" action="{{ url_for('contents.entry_update', entry_id=e.entry_id) }}" class="d-inline">
+                        {{ csrf_field() }}<input type="hidden" name="action" value="{{ action }}">
+                        <button class="btn btn-outline-secondary" title="{{ title }}" {{ 'disabled' if disabled }}><i class="bi bi-{{ icon }}"></i></button>
+                    </form>
+                    {% endfor %}
+                    <form method="POST" action="{{ url_for('contents.entry_update', entry_id=e.entry_id) }}" class="d-inline">
+                        {{ csrf_field() }}<input type="hidden" name="action" value="{{ 'hide' if e.visible else 'show' }}">
+                        <button class="btn btn-outline-secondary" title="{{ 'Hide' if e.visible else 'Show' }}"><i class="bi bi-eye{{ '-slash' if e.visible }}"></i></button>
+                    </form>
+                    <form method="POST" action="{{ url_for('contents.entry_update', entry_id=e.entry_id) }}" class="d-inline"
+                          onsubmit="return confirm('Remove this line from the Contents?');">
+                        {{ csrf_field() }}<input type="hidden" name="action" value="delete">
+                        <button class="btn btn-outline-danger" title="Remove"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </li>
+        {% else %}
+        <li class="list-group-item text-muted">The Contents is empty, so the book will have no Contents page. Add lines below.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+{% if not book.is_completed %}
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">Add headings</div>
+            <div class="card-body">
+                {% if available_headings %}
+                <form method="POST" action="{{ url_for('contents.add_headings', book_id=book.book_id) }}">
+                    {{ csrf_field() }}
+                    <div class="toc-heading-picker mb-2">
+                        {% for chapter, block in available_headings %}
+                            {% if loop.first or available_headings[loop.index0 - 1][0].chapter_id != chapter.chapter_id %}
+                            <div class="fw-semibold small mt-2">{{ chapter.title }}</div>
+                            {% endif %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="block_ids" value="{{ block.block_id }}" id="hb-{{ block.block_id }}">
+                                <label class="form-check-label" for="hb-{{ block.block_id }}">{{ block.content_text }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <button class="btn btn-sm btn-primary"><i class="bi bi-plus-circle"></i> Add selected</button>
+                </form>
+                {% else %}
+                <p class="text-muted mb-0">All headings are already listed, or the book has none. Add a Heading block in a chapter to list it here.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header">Add a part divider</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('contents.add_part', book_id=book.book_id) }}" class="row g-2">
+                    {{ csrf_field() }}
+                    <div class="col-12"><input type="text" class="form-control" name="label" maxlength="300" required placeholder="Part One"></div>
+                    <div class="col-8">
+                        <select class="form-select" name="before" aria-label="Where to put it">
+                            <option value="">at the end</option>
+                            {% for row in rows %}<option value="{{ row.entry.entry_id }}">before: {{ row.entry.label or row.default or 'divider' }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4"><button class="btn btn-primary w-100">Add</button></div>
+                </form>
+            </div>
+        </div>
+        {% if missing_sections %}
+        <div class="card">
+            <div class="card-header">Add a back-matter line</div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('contents.add_section', book_id=book.book_id) }}" class="row g-2">
+                    {{ csrf_field() }}
+                    <div class="col-8">
+                        <select class="form-select" name="section_key">
+                            {% for key, name in missing_sections %}<option value="{{ key }}">{{ name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-4"><button class="btn btn-outline-primary w-100">Add</button></div>
+                </form>
+                <div class="form-text">It only appears if the book actually has that section.</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('contents.reset', book_id=book.book_id) }}"
+      onsubmit="return confirm('Discard your changes and use the automatic Contents again?');">
+    {{ csrf_field() }}
+    <button class="btn btn-outline-danger"><i class="bi bi-arrow-counterclockwise"></i> Reset to automatic Contents</button>
+</form>
+{% endif %}
+{% endif %}
+{% endblock %}

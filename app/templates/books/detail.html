@@ -196,10 +196,33 @@
 
     <div class="col-lg-6">
         <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-list-nested"></i> Contents</span>
+                <a href="{{ url_for('contents.edit', book_id=book.book_id) }}" class="btn btn-sm btn-outline-primary">
+                    {{ 'View' if book.is_completed else 'Edit' }}
+                </a>
+            </div>
+            <div class="card-body">
+                {% if book.toc_entries %}
+                <p class="mb-1"><strong>Customized</strong> &middot; {{ book.toc_entries | length }} line{{ '' if book.toc_entries | length == 1 else 's' }}.</p>
+                {% else %}
+                <p class="mb-1"><strong>Automatic</strong> &middot; one line per chapter.</p>
+                {% endif %}
+                <p class="small text-muted mb-0">Rename, hide, indent or reorder Contents lines, list headings, and add part dividers.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card h-100">
             <div class="card-header"><i class="bi bi-box-arrow-up-right"></i> Layout &amp; Export</div>
             <div class="card-body d-flex flex-column gap-2">
                 <a href="{{ url_for('exports.layout_edit', book_id=book.book_id) }}" class="btn btn-outline-secondary">
                     <i class="bi bi-layout-text-sidebar-reverse"></i> Layout &amp; Page view
+                </a>
+                <a href="{{ url_for('renders.list_renders', book_id=book.book_id) }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-archive"></i> Stored books (PDF, EPUB, HTML, ODT)
+                    {% if book.renders %}<span class="badge bg-secondary">{{ book.renders | length }}</span>{% endif %}
                 </a>
                 <div class="d-flex gap-2">
                     <a href="{{ url_for('exports.export_epub', book_id=book.book_id) }}" class="btn btn-primary flex-fill"><i class="bi bi-book-half"></i> Download EPUB</a>

@@ -76,6 +76,34 @@ def chapter_rename(chapter_id):
     return redirect(url_for('chapters.chapter_edit', chapter_id=chapter.chapter_id))
 
 
+MAX_EPIGRAPH = 2000
+MAX_EPIGRAPH_SOURCE = 300
+
+
+@bp.route('/chapters/<int:chapter_id>/epigraph', methods=['POST'])
+@login_required
+def chapter_epigraph(chapter_id):
+    """Set, change or (with empty text) remove the epigraph shown under the chapter title."""
+    chapter = owned_chapter_or_404(chapter_id)
+    ensure_editable(chapter.book)
+    text = (request.form.get('epigraph_text') or '').replace('\r\n', '\n').strip('\n')
+    source = (request.form.get('epigraph_source') or '').strip()
+    if len(text) > MAX_EPIGRAPH:
+        flash(f'The epigraph is limited to {MAX_EPIGRAPH} characters.', 'danger')
+    elif len(source) > MAX_EPIGRAPH_SOURCE:
+        flash(f'The source is limited to {MAX_EPIGRAPH_SOURCE} characters.', 'danger')
+    else:
+        if text.strip():
+            chapter.epigraph_text, chapter.epigraph_source = text, source or None
+            flash('Epigraph saved.', 'success')
+        else:                                   # no text: no epigraph (a source alone means nothing)
+            chapter.epigraph_text = chapter.epigraph_source = None
+            flash('Epigraph removed.', 'success')
+        chapter.book.touch()
+        db.session.commit()
+    return redirect(url_for('chapters.chapter_edit', chapter_id=chapter.chapter_id))
+
+
 @bp.route('/chapters/<int:chapter_id>/move', methods=['POST'])
 @login_required
 def chapter_move(chapter_id):

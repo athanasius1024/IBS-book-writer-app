@@ -6,13 +6,16 @@ page numbers agree between formats. Page numbers are looked up in a `pages` mapp
 """
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from html import escape
 
+from imagespec import DERIVED_SCHEME, MEDIA_SCHEME  # noqa: F401  (re-exported for the renderers)
+from imaging import finalize_inline_images, resolve_export
 from layout import page_style_classes
 from markup import render_markdown, render_markdown_lines
 from terms import Annotator, Matcher, collapse_pages
+from toc import automatic_lines, custom_lines, flat_items_html, stamp_text
 
-MEDIA_SCHEME = 'ibs-media://'
 HEX_COLOR = re.compile(r'^#[0-9a-fA-F]{6}$')
 
 _HEADING_TAG = {1: 'h2', 2: 'h3', 3: 'h4'}
@@ -22,7 +25,16 @@ def media_src(asset_id):
     return f'{MEDIA_SCHEME}{int(asset_id)}'
 
 
-def block_html(block):
+def text_html(text, user_id, resolve_images=True):
+    """Markdown text as sanitised HTML, with its inline pictures (cropped and resized as the author asked)
+    pointing at the owner's own files."""
+    html = str(render_markdown(text, images=True))
+    if resolve_images and '<img' in html:
+        html = finalize_inline_images(html, lambda asset_id, crop: resolve_export(asset_id, crop, user_id))
+    return html
+
+
+def block_html(block, resolve_images=True):
     """HTML for one content block (all user text escaped or sanitised)."""
     data = block.content_data or {}
     kind = block.block_type
@@ -51,7 +63,7 @@ def block_html(block):
         else:
             inner = '<p><em>[image no longer available]</em></p>'
     else:
-        inner = str(render_markdown(text))
+        inner = text_html(text, block.chapter.book.user_id, resolve_images)
     return f'<div class="blk blk-{kind}" id="b{block.block_id}">{inner}</div>'
 
 
@@ -79,7 +91,8 @@ def usage_counts(book):
         return {}
     annotator = Annotator(Matcher(terms), 'none')
     for chapter in book.chapters:
-        annotator.annotate(f'<h1>{escape(chapter.title)}</h1>' + ''.join(block_html(b) for b in chapter.blocks))
+        annotator.annotate(f'<h1>{escape(chapter.title)}</h1>'
+                           + ''.join(block_html(b, resolve_images=False) for b in chapter.blocks))
     return {term_id: len(found) for term_id, found in annotator.occurrences.items()}
 
 
@@ -96,9 +109,10 @@ class FrontPage:
 class BookDoc:
     """Builds and annotates the book once; renderers ask it for pieces."""
 
-    def __init__(self, book, settings):
+    def __init__(self, book, settings, generated_at=None):
         self.book = book
         self.settings = settings
+        self.generated_at = generated_at or datetime.now()    # shown in the Contents stamp
         self.title = book.title
         self.terms = list(book.terms)
         self.annotator = Annotator(Matcher(self.terms), settings['link_mode'])
@@ -110,12 +124,31 @@ class BookDoc:
             anchor = f'ch-{chapter.chapter_id}'
             raw = (f'<h1 class="chapter-title" id="{anchor}">{escape(chapter.title)}</h1>'
                    '<div class="chapter-body">' + ''.join(block_html(b) for b in chapter.blocks) + '</div>')
+            annotated = self.annotator.annotate(raw)
+            # The epigraph goes in after the glossary pass, so quoted words never become glossary links
+            # or Index entries: the Index reflects the author's own text.
+            epigraph = self.epigraph_html(chapter)
+            if epigraph:
+                annotated = annotated.replace('</h1>', '</h1>' + epigraph, 1)
             self.chapters.append({'id': chapter.chapter_id, 'anchor': anchor, 'title': chapter.title,
-                                  'html': self.annotator.annotate(raw)})
+                                  'html': annotated})
             self.block_anchors.extend(f'b{b.block_id}' for b in chapter.blocks)
 
         self.front_pages = [self._front_page(p) for p in book.pages]
         self.authors = list(book.authors)
+
+    def epigraph_html(self, chapter):
+        """The chapter's epigraph (a quotation under the title) styled by the book's layout settings."""
+        text = (chapter.epigraph_text or '').strip()
+        if not text:
+            return ''
+        s = self.settings
+        classes = (f'epigraph ep-{s["epigraph_align"]} ep-{s["epigraph_size"]}'
+                   + (' ep-italic' if s['epigraph_italic'] else ''))
+        source = (chapter.epigraph_source or '').strip()
+        cite = f'<p class="epigraph-source">\u2014 {escape(source)}</p>' if source else ''
+        return (f'<blockquote class="{classes}" epub:type="epigraph">'
+                f'<div class="epigraph-text">{render_markdown_lines(text)}</div>{cite}</blockquote>')
 
     # ---- front matter ----------------------------------------------------------------------
     def _front_page(self, page):
@@ -208,23 +241,46 @@ class BookDoc:
                          f'<h2>{escape(author.name)}</h2>{role}<div class="bio">{bio}</div></div>')
         return ''.join(parts)
 
-    def toc_entries(self):
-        """[(anchor, title)] for chapters and the generated back matter, in reading order."""
-        entries = [(c['anchor'], c['title']) for c in self.chapters]
+    def toc_sections(self):
+        """{'glossary': 'Glossary', ...} for the generated back matter this book actually has."""
+        sections = {}
         if self.has_glossary():
-            entries.append(('sec-glossary', 'Glossary'))
+            sections['glossary'] = 'Glossary'
         if self.has_index():
-            entries.append(('sec-index', 'Index'))
+            sections['index'] = 'Index'
         if self.has_about():
-            entries.append(('sec-about', self.about_title()))
-        return entries
+            sections['about'] = self.about_title()
+        return sections
 
-    def toc_html(self, toc_pages):
-        items = ''.join(
-            f'<li><a href="#{anchor}"><span class="toc-title">{escape(title)}</span>'
-            f'<span class="toc-page">{toc_pages.get(anchor, "")}</span></a></li>'
-            for anchor, title in self.toc_entries())
-        return f'<nav class="toc"><h1>Contents</h1><ol>{items}</ol></nav>'
+    def automatic_toc_lines(self):
+        return automatic_lines(self.chapters, self.toc_sections())
+
+    @property
+    def has_custom_toc(self):
+        return bool(self.book.toc_entries)
+
+    def toc_lines(self):
+        """[TocLine] in reading order: the author's edited list if there is one, else the automatic list."""
+        if not self.has_custom_toc:
+            return self.automatic_toc_lines()
+        headings = {b.block_id: b.content_text for ch in self.book.chapters for b in ch.blocks
+                    if b.block_type == 'heading'}
+        return custom_lines(self.book.toc_entries, self.chapters, headings, self.toc_sections())
+
+    def toc_entries(self):
+        """[(anchor, title)] for the linked Contents lines (the layout pass looks up their page numbers)."""
+        return [(line.anchor, line.title) for line in self.toc_lines() if line.anchor]
+
+    def has_contents(self):
+        return bool(self.toc_lines())
+
+    def stamp(self):
+        return stamp_text(self.book.version, self.generated_at)
+
+    def toc_html(self, toc_pages=None, with_stamp=True):
+        stamp = f'<p class="toc-stamp">{escape(self.stamp())}</p>' if with_stamp else ''
+        return (f'<nav class="toc"><h1>Contents</h1><ol>{flat_items_html(self.toc_lines(), toc_pages)}</ol>'
+                f'{stamp}</nav>')
 
     @property
     def body_start_anchor(self):

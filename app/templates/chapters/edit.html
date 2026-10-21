@@ -31,6 +31,36 @@
 </form>
 {% endif %}
 
+{% if not book.is_completed or chapter.has_epigraph %}
+<div class="card mb-4">
+    <div class="card-header"><i class="bi bi-quote"></i> Epigraph
+        <span class="text-muted small">&mdash; an optional quotation under the chapter title</span></div>
+    <div class="card-body">
+        {% if book.is_completed %}
+        <div class="content-text">{{ chapter.epigraph_text | markdown_lines }}</div>
+        {% if chapter.epigraph_source %}<div class="text-muted">&mdash; {{ chapter.epigraph_source }}</div>{% endif %}
+        {% else %}
+        <form method="POST" action="{{ url_for('chapters.chapter_epigraph', chapter_id=chapter.chapter_id) }}">
+            {{ csrf_field() }}
+            <div class="mb-2">
+                <textarea class="form-control" name="epigraph_text" rows="3" maxlength="2000" aria-label="Epigraph text"
+                          placeholder="Nothing in the world is softer than water...">{{ chapter.epigraph_text or '' }}</textarea>
+            </div>
+            <div class="row g-2">
+                <div class="col-md">
+                    <input type="text" class="form-control" name="epigraph_source" maxlength="300" aria-label="Epigraph source"
+                           placeholder="Who said it, e.g. Tao Teh Ching #78" value="{{ chapter.epigraph_source or '' }}">
+                </div>
+                <div class="col-md-auto"><button class="btn btn-outline-primary"><i class="bi bi-save"></i> Save epigraph</button></div>
+            </div>
+            <div class="form-text">Line breaks are kept as you type them. Empty the text to remove the epigraph. Every chapter's
+                epigraph uses the same style, set under Layout &amp; Page view.</div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <div id="blocks">
     {% for block in chapter.blocks %}
         {% include "chapters/_block.html" %}
@@ -65,5 +95,10 @@
         </form>
     </div>
 </div>
+{% include "chapters/_image_dialog.html" %}
 {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% if not book.is_completed %}<script src="{{ url_for('static', filename='js/images.js') }}"></script>{% endif %}
 {% endblock %}

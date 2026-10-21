@@ -14,9 +14,9 @@ from flask import current_app
 from weasyprint import CSS, HTML
 from weasyprint.urls import URLFetcher, URLFetcherResponse
 
-from bookdoc import MEDIA_SCHEME, BookDoc, cover_has_content, cover_html
+from bookdoc import DERIVED_SCHEME, MEDIA_SCHEME, BookDoc, cover_has_content, cover_html
 from layout import get_settings, pdf_css, settings_hash
-from models import MediaAsset
+from models import MediaAsset, MediaDerivative
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +37,8 @@ class MediaFetcher(URLFetcher):
         self.upload_dir = Path(upload_dir).resolve()
 
     def fetch(self, url, headers=None):
+        if url.startswith(DERIVED_SCHEME):
+            return self._fetch_derivative(url)
         if not url.startswith(MEDIA_SCHEME):
             raise ValueError(f'Blocked URL: {url[:60]}')
         try:
@@ -51,6 +53,20 @@ class MediaFetcher(URLFetcher):
             raise ValueError('Media file missing')
         return URLFetcherResponse(url, body=path.read_bytes(), headers={'Content-Type': asset.mime_type})
 
+    def _fetch_derivative(self, url):
+        """A cropped / downsized copy of one of the owner's pictures."""
+        try:
+            number = int(url[len(DERIVED_SCHEME):])
+        except ValueError:
+            raise ValueError('Bad media URL') from None
+        row = MediaDerivative.query.filter_by(derivative_id=number, user_id=self.user_id).first()
+        if row is None:
+            raise ValueError('Unknown media')
+        path = (self.upload_dir / row.file_path).resolve()
+        if self.upload_dir not in path.parents or not path.is_file():
+            raise ValueError('Media file missing')
+        return URLFetcherResponse(url, body=path.read_bytes(), headers={'Content-Type': row.mime_type})
+
 
 @dataclass
 class LayoutResult:
@@ -63,8 +79,9 @@ class LayoutResult:
     passes: int = 0
 
 
-def assemble_html(doc, pages, toc_pages):
-    """The full print document as one HTML string."""
+def assemble_body(doc, pages, toc_pages):
+    """All sections of the book (covers, title, front matter, Contents, chapters, back matter) in order,
+    as HTML for inside a <body>. Shared by the PDF layout and the HTML export."""
     s = doc.settings
     parts = []
 
@@ -81,7 +98,7 @@ def assemble_html(doc, pages, toc_pages):
         parts.append(f'<section class="titlepage" id="title-page">{doc.title_html()}</section>')
     for page in doc.front_pages:
         parts.append(f'<section class="fm-page {page.classes}" id="{page.anchor}">{page.html}</section>')
-    if s['include_contents'] and doc.toc_entries():
+    if s['include_contents'] and doc.has_contents():
         parts.append(f'<section class="contents" id="contents">{doc.toc_html(toc_pages)}</section>')
     for index, chapter in enumerate(doc.chapters):
         parts.append(f'<section class="chapter{" first" if index == 0 else ""}">{chapter["html"]}</section>')
@@ -97,9 +114,15 @@ def assemble_html(doc, pages, toc_pages):
         if cover_has_content(doc.cover('back')):
             parts.append(cover_section('back', 'cover-back'))
 
+    return ''.join(parts)
+
+
+def assemble_html(doc, pages, toc_pages):
+    """The full print document as one HTML string."""
     from html import escape
-    return (f'<!DOCTYPE html><html lang="{s["language"]}"><head><meta charset="utf-8">'
-            f'<title>{escape(doc.title)}</title></head><body>' + ''.join(parts) + '</body></html>')
+    return (f'<!DOCTYPE html><html lang="{doc.settings["language"]}"><head><meta charset="utf-8">'
+            f'<title>{escape(doc.title)}</title></head><body>' + assemble_body(doc, pages, toc_pages)
+            + '</body></html>')
 
 
 def first_pages(rendered):
@@ -134,11 +157,15 @@ def run_layout(book, settings):
                         physical_pages=len(rendered.pages), body_start=start, passes=passes)
 
 
-def get_layout(book):
-    """Cached layout of the book as it is right now (keyed by book edit time and settings)."""
+def get_layout(book, fresh=False):
+    """Cached layout of the book as it is right now (keyed by book edit time and settings).
+
+    fresh=True rebuilds it even if the book has not changed (a new 'Generated' date on the Contents);
+    the new result replaces the cached one.
+    """
     settings = get_settings(book)
     key = (book.book_id, book.modified_at.isoformat() if book.modified_at else '', settings_hash(settings))
-    if key in _CACHE:
+    if key in _CACHE and not fresh:
         _CACHE.move_to_end(key)
         return _CACHE[key]
     result = run_layout(book, settings)
