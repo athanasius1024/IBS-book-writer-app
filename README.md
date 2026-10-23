@@ -7,7 +7,7 @@ A small multi-user web app for writing books. Each user logs in with a username 
 Ready-to-run programs for one person on one computer (nothing to install; your books stay on your computer) are on the **[Releases page](https://github.com/athanasius1024/IBS-book-writer-app/releases/latest)**. Open it and look under **Assets**:
 
 - **Windows:** `IBSBookWriter_v1_0.exe`. Double-click it. (Windows may say "Windows protected your PC": choose *More info*, then *Run anyway*.)
-- **Ubuntu, Debian and similar:** `ibs-book-writer_amd64_v1_0.deb`. Install it with `sudo apt install ./ibs-book-writer_amd64_v1_0.deb`, then start **IBS Book Writer** from your applications menu, or run `ibs-book-writer` in a terminal.
+- **Ubuntu, Debian and similar:** `ibs-book-writer_amd64_v1_0.deb`. Install it with `sudo apt install ./ibs-book-writer_amd64_v1_0.deb`, then start **IBS Book Writer** from your applications menu, or run `ibs-book-writer` in a terminal. It needs Ubuntu 22.04, Debian 12 or newer. To remove it: `sudo apt remove ibs-book-writer` (your books stay in `~/.local/share/ibs-book-writer`).
 - **Any other 64-bit Linux:** `ibs-book-writer-linux-x86_64_v1_0`. Run `chmod +x` on it, then run it.
 - **macOS:** not available yet.
 
@@ -64,7 +64,7 @@ For one person on one computer there is nothing to install: a single file that c
 - **Windows warnings:** the `.exe` is not code-signed, so Windows SmartScreen may say "Windows protected your PC" (choose *More info*, then *Run anyway*), and some antivirus programs distrust any program made with PyInstaller. Check the download against `SHA256SUMS`. The first start takes a few seconds while the file unpacks itself.
 - Single user, this computer only: it does not listen on the network. For several people use the server setup in [DEPLOYMENT.md](DEPLOYMENT.md).
 
-**Build it yourself:** `packaging/build_linux.sh --test` (needs Python 3.11+ and the Pango libraries) or, on Windows with MSYS2 installed, `packaging\build_windows.ps1 -Test`. Both leave the program in `dist/` and test it by really using it (`packaging/smoke_test.py`). `.github/workflows/build-desktop.yml` is the GitHub Actions workflow that builds both programs on Ubuntu 22.04 and Windows on every push, runs the tests and the smoke test against each finished program, keeps the files as build artifacts, and attaches them to a release when a `v*` tag is pushed.
+**Build it yourself:** `packaging/build_linux.sh --test` (needs Python 3.11+ and the Pango libraries) or, on Windows with MSYS2 installed, `packaging\build_windows.ps1 -Test`. Both leave the program in `dist/` and test it by really using it (`packaging/smoke_test.py`). On Debian or Ubuntu, `packaging/build_deb.sh` then wraps the Linux program into a `.deb`, and `packaging/test_deb.sh` tests that package without root. `.github/workflows/build-desktop.yml` is the GitHub Actions workflow that builds both programs on Ubuntu 22.04 and Windows on every push, runs the tests and the smoke test against each finished program, keeps the files as build artifacts, and attaches them to a release when a `v*` tag is pushed.
 
 ## Project layout
 
