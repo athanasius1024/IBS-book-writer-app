@@ -2,6 +2,17 @@
 
 A small multi-user web app for writing books. Each user logs in with a username and password, can keep any number of books, and edits each book's details, cover and chapters in the browser.
 
+## Download
+
+Ready-to-run programs for one person on one computer (nothing to install; your books stay on your computer) are on the **[Releases page](https://github.com/athanasius1024/IBS-book-writer-app/releases/latest)**. Open it and look under **Assets**:
+
+- **Windows:** `IBSBookWriter_v1_0.exe`. Double-click it. (Windows may say "Windows protected your PC": choose *More info*, then *Run anyway*.)
+- **Ubuntu, Debian and similar:** `ibs-book-writer_amd64_v1_0.deb`. Install it with `sudo apt install ./ibs-book-writer_amd64_v1_0.deb`, then start **IBS Book Writer** from your applications menu, or run `ibs-book-writer` in a terminal.
+- **Any other 64-bit Linux:** `ibs-book-writer-linux-x86_64_v1_0`. Run `chmod +x` on it, then run it.
+- **macOS:** not available yet.
+
+`SHA256SUMS` lets you check a download. See "Desktop edition" below for how it works and where it keeps your data.
+
 ## Features
 
 - **Accounts**: username + simple password (minimum 8 characters, stored hashed). The first account created is the administrator.

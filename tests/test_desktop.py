@@ -273,6 +273,8 @@ def test_the_version_is_one_number_that_names_every_file(capsys):
     assert version.WINDOWS_FILE == f'IBSBookWriter_v{n}.exe'
     assert version.LINUX_FILE == f'ibs-book-writer-linux-x86_64_v{n}' and version.TAG == f'v{n}'
     assert version.MACOS_FILE == f'ibs-book-writer-macos_v{n}'
+    assert version.DEB_FILE == f'ibs-book-writer_amd64_v{n}.deb'
+    assert version.DEB_VERSION == n.replace('_', '.') and re.fullmatch(r'\d+\.\d+', version.DEB_VERSION)   # a legal Debian version
     assert desktop.VERSION == n
 
 
@@ -284,7 +286,7 @@ def test_pages_show_the_version(client):
 
 def test_no_build_file_hard_codes_a_name_or_number(tmp_path):
     """The scripts must take the file names from version.py, so a release is a one-line change there."""
-    for name in ('build_linux.sh', 'build_windows.ps1', 'ibsbook.spec'):
+    for name in ('build_linux.sh', 'build_windows.ps1', 'ibsbook.spec', 'build_deb.sh'):
         source = (ROOT / 'packaging' / name).read_text()
         executable_lines = [line for line in source.splitlines() if not line.lstrip().startswith(('#', '<#', 'Output:'))]
         code = '\n'.join(executable_lines)
